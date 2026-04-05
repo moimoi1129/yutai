@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精霊クロス伝説</title>
+    <style>
+        /* === スクロールバー問題の解消 === */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* === ポップRPG・白×ピンクパレット === */
+        :root {
+            --sumi:       #fff0f8;
+            --sumi-mid:   #fde8f4;
+            --sumi-lt:    #faf0fb;
+            --sumi-line:  #f0c8e0;
+            --kin:        #e0347a;
+            --kin-lt:     #ff6faa;
+            --kin-pale:   #ffe0f0;
+            --text-main:  #4a2e3a;
+            --text-sub:   #8a6b78;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+            overflow: hidden; /* 画面外のスクロールを禁止 */
+        }
+
+        #game-container {
+            width: 1200px;
+            height: 720px;
+            background-color: var(--sumi);
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            color: var(--text-main);
+            border-radius: 8px; /* 少しだけ丸みを持たせてリッチに */
+            overflow: hidden;
+        }
+
+        /* === ヘッダー === */
+        header {
+            height: 60px;
+            background-color: var(--sumi-mid);
+            border-bottom: 2px solid var(--sumi-line);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+
+        .resource-bar { display: flex; gap: 15px; }
+        .resource-item {
+            background: white;
+            border: 2px solid var(--kin-lt);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 0 var(--sumi-line); /* プチ立体感 */
+        }
+
+        /* === メインレイアウト === */
+        #main-area {
+            display: flex;
+            flex: 1;
+            height: calc(100% - 60px);
+        }
+
+        /* 左側：ナビゲーション */
+        #nav-menu {
+            width: 180px;
+            background-color: var(--sumi-lt);
+            border-right: 2px solid var(--sumi-line);
+            display: flex;
+            flex-direction: column;
+            padding: 15px 0;
+            overflow-y: auto; /* タブが増えた時のため */
+        }
+
+        .nav-btn {
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--kin);
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            transition: 0.1s;
+            border-left: 5px solid transparent;
+        }
+        .nav-btn:hover { background-color: var(--kin-pale); }
+        .nav-btn.active {
+            background-color: var(--kin-pale);
+            border-left: 5px solid var(--kin);
+        }
+
+        /* 中央：コンテンツ */
+        #content-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .view-screen { display: none; height: 100%; }
+        .view-screen.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            border-bottom: 2px dashed var(--sumi-line);
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            color: var(--kin);
+        }
+
+        /* 右側：チャット＆ログ */
+        #chat-area {
+            width: 280px;
+            background-color: var(--sumi-mid);
+            border-left: 2px solid var(--sumi-line);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            padding: 10px;
+            background: var(--kin-pale);
+            border-bottom: 1px solid var(--sumi-line);
+            font-weight: bold;
+            text-align: center;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+        .log-entry {
+            background: white;
+            padding: 8px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--kin-lt);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* 汎用パーツ */
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid var(--sumi-line);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 0 var(--sumi-line); /* ポップな立体感 */
+        }
+        .btn-action {
+            background-color: var(--kin);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.1s;
+            box-shadow: 0 4px 0 #a01a50; /* ボタンの厚み */
+            margin-top: 10px;
+        }
+        .btn-action:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #a01a50; /* 押したときの沈み込み */
+        }
+        .btn-action:disabled {
+            background-color: #ccc;
+            box-shadow: 0 4px 0 #999;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <header>
+            <div style="font-weight: bold; font-size: 22px; color: var(--kin); letter-spacing: 1px;">精霊クロス伝説</div>
+            <div class="resource-bar">
+                <div class="resource-item">💴 資金: <span id="ui-money">0</span></div>
+                <div class="resource-item">🛡️ 信用在庫: <span id="ui-stock">0</span></div>
+                <div class="resource-item">✉️ 封筒: <span id="ui-envelope">0</span></div>
+                <div class="resource-item">🎫 議決権: <span id="ui-ticket">0</span></div>
+            </div>
+        </header>
+
+        <div id="main-area">
+            
+            <!-- タブを要望通りの順序で配置 -->
+            <div id="nav-menu">
+                <button class="nav-btn active" data-target="home">ホーム</button>
+                <button class="nav-btn" data-target="spirits">優待精霊</button>
+                <button class="nav-btn" data-target="items">優待品</button>
+                <button class="nav-btn" data-target="gacha">封筒開封</button>
+                <button class="nav-btn" data-target="mission">作戦(ミッション)</button>
+                <button class="nav-btn" data-target="battle">出撃</button>
+                <button class="nav-btn" data-target="achievements">実績</button>
+                <button class="nav-btn" data-target="settings">設定画面</button>
+            </div>
+
+            <!-- コンテンツエリア -->
+            <div id="content-area">
+                
+                <!-- 1. ホーム -->
+                <div id="sc-home" class="view-screen active">
+                    <h2>ホーム</h2>
+                    <div class="panel">
+                        <p>祈念を行って資金や在庫を調達します。</p>
+                        <button class="btn-action" id="btn-pray">祈念する</button>
+                    </div>
+                </div>
+
+                <!-- 2. 優待精霊 -->
+                <div id="sc-spirits" class="view-screen">
+                    <h2>優待精霊</h2>
+                    <div class="panel">
+                        <p>獲得した優待精霊（キャラクター）の編成・育成を行います。（開発中）</p>
+                    </div>
+                </div>
+
+                <!-- 3. 優待品 -->
+                <div id="sc-items" class="view-screen">
+                    <h2>優待品（インベントリ）</h2>
+                    <div class="panel">
+                        <p>所持している優待品（アイテム）の一覧です。（開発中）</p>
+                    </div>
+                </div>
+
+                <!-- 4. 封筒開封 (ガチャ) -->
+                <div id="sc-gacha" class="view-screen">
+                    <h2>封筒開封</h2>
+                    <div class="panel">
+                        <p>封筒を開けて、新たな優待精霊やアイテムを獲得します。</p>
+                        <button class="btn-action" id="btn-open-gacha">茶封筒を開ける（封筒-1, 議決権+1）</button>
+                    </div>
+                </div>
+
+                <!-- 5. 作戦（ミッション） -->
+                <div id="sc-mission" class="view-screen">
+                    <h2>作戦（ミッション）</h2>
+                    <div class="panel">
+                        <p>デイリーミッションや期間限定ミッションを受注・報告します。（開発中）</p>
+                    </div>
+                </div>
+
+                <!-- 6. 出撃 (バトル) -->
+                <div id="sc-battle" class="view-screen">
+                    <h2>出撃</h2>
+                    <div class="panel">
+                        <p>信用在庫を消費してマップを攻略します。（開発中）</p>
+                    </div>
+                </div>
+
+                <!-- 7. 実績 -->
+                <div id="sc-achievements" class="view-screen">
+                    <h2>実績</h2>
+                    <div class="panel">
+                        <h3>現在の統計データ</h3>
+                        <br>
+                        <ul style="line-height: 1.8; list-style-type: square; margin-left: 20px;">
+                            <li>祈念した回数: <span id="ui-stat-pray">0</span> 回</li>
+                            <li>ガチャを引いた回数: <span id="ui-stat-gacha">0</span> 回</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 8. 設定画面 -->
+                <div id="sc-settings" class="view-screen">
+                    <h2>設定画面</h2>
+                    <div class="panel">
+                        <p>音量調整やデータ引き継ぎなどの設定を行います。（開発中）</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- チャット・ログ -->
+            <div id="chat-area">
+                <div class="chat-header">全体ログ</div>
+                <div class="chat-messages" id="ui-log">
+                    <div class="log-entry" style="border-left-color: #8a6b78;">システム: ログインしました。</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== JS（ロジック） ===== -->
+    <script>
+        const state = {
+            resources: { money: 100000, creditStock: 50, envelopes: 10, votingRights: 0 },
+            statistics: { prayCount: 0, gachaCount: 0 }
+        };
+
+        function updateUI() {
+            document.getElementById('ui-money').innerText = state.resources.money.toLocaleString();
+            document.getElementById('ui-stock').innerText = state.resources.creditStock.toLocaleString();
+            document.getElementById('ui-envelope').innerText = state.resources.envelopes.toLocaleString();
+            document.getElementById('ui-ticket').innerText = state.resources.votingRights.toLocaleString();
+            
+            document.getElementById('ui-stat-pray').innerText = state.statistics.prayCount;
+            document.getElementById('ui-stat-gacha').innerText = state.statistics.gachaCount;
+        }
+
+        function addLog(message) {
+            const logArea = document.getElementById('ui-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerText = message;
+            logArea.prepend(entry);
+        }
+
+        // タブ切り替えロジック
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+
+                const targetId = 'sc-' + e.target.getAttribute('data-target');
+                document.querySelectorAll('.view-screen').forEach(screen => {
+                    screen.classList.remove('active');
+                });
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+
+        // アクション
+        document.getElementById('btn-pray').addEventListener('click', () => {
+            state.resources.money += 1000;
+            state.resources.creditStock += 5;
+            state.statistics.prayCount += 1;
+            addLog("✨ 祈念完了：資金と在庫を獲得しました！");
+            updateUI();
+        });
+
+        document.getElementById('btn-open-gacha').addEventListener('click', () => {
+            if (state.resources.envelopes >= 1) {
+                state.resources.envelopes -= 1;
+                state.resources.votingRights += 1;
+                state.statistics.gachaCount += 1;
+                addLog("✉️ 茶封筒を開封！議決権を獲得。");
+                updateUI();
+            } else {
+                addLog("⚠️ 封筒が足りません。");
+            }
+        });
+
+        updateUI();
+    </script>
+</body>
+</html>
