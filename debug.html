@@ -2,32 +2,164 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Debug Manager - Game Logic</title>
+    <title>Debug Manager - 精霊クロス伝説</title>
+    <!--
+    ==========================================================================
+    【 DEV_MODE: 開発方針＆意図メモ 】
+    ・本ファイルはロジック構築・動作確認専用の「Logic Console」である。
+    ・ログ出力は日本語に翻訳せず「ソースコードそのまま」を表示させる。
+    ・変数名は青文字などの装飾を用い、どの値が変化したか一目でわかるようにする。
+    ・緑色文字：一般ユーザーが視認する数字などの値
+    ・UIの見た目（index.html）の作り込みは後回しにし、まずは状態(state)の管理を優先する。
+    ==========================================================================
+    -->
     <style>
+        /* デバッグ用のプレーンで無骨なデザイン */
         body { font-family: monospace; background-color: #1a1a1a; color: #00ff00; padding: 20px; }
-        .monitor-sector { border: 1px solid #333; padding: 10px; margin-bottom: 10px; }
-        .control-sector { border: 1px solid #333; padding: 10px; }
-        button { background: #333; color: #fff; border: 1px solid #555; cursor: pointer; padding: 5px 10px; }
-        button:disabled { color: #666; }
+        h1 { font-size: 20px; color: #fff; border-bottom: 1px solid #555; padding-bottom: 10px;}
+        .monitor-sector { border: 1px solid #333; padding: 15px; margin-bottom: 15px; background-color: #0a0a0a; }
+        .control-sector { border: 1px solid #333; padding: 15px; background-color: #0a0a0a; }
+        
+        button { 
+            display: block; width: 100%; text-align: left; 
+            background: #2a2a2a; color: #fff; border: 1px solid #555; 
+            cursor: pointer; padding: 10px 15px; margin: 8px 0; 
+            font-family: monospace; font-size: 14px;
+        }
+        button:hover { background: #444; border-color: #00ff00; }
+        button:disabled { color: #666; cursor: not-allowed; }
+        
+        .log-container { 
+            margin-top: 15px; background: #000; border: 1px solid #333; 
+            height: 200px; overflow-y: auto; padding: 10px; 
+        }
+        .log-entry { 
+            color: #ccc; font-size: 13px; margin-bottom: 4px; 
+            border-bottom: 1px dashed #222; padding-bottom: 4px;
+        }
+        .log-time { color: #00ff00; margin-right: 10px; }
+        
+        hr { border-color: #333; margin: 15px 0; }
+        
+        /* 変数名（青文字）のスタイル */
+        .var-name { color: #88ccff; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h1>Game Debug Console</h1>
+    <h1>[ DEV_MODE ] 精霊クロス伝説 - Logic Console</h1>
 
     <div class="monitor-sector">
-        <h3>[ State Monitor ]</h3>
-        <p>Cookies: <span id="val-cookies">0</span></p>
-        <p>Click Power: <span id="val-power">1</span></p>
+        <h3>>>> STATE MONITOR</h3>
+        <p>💴 資金 <span class="var-name">state.resources.money</span> : <span id="val-money">0</span></p>
+        <p>🛡️ 信用在庫 <span class="var-name">state.resources.creditStock</span> : <span id="val-stock">0</span></p>
+        <p>✉️ ガチャ封筒 <span class="var-name">state.resources.envelopes</span> : <span id="val-envelope">0</span></p>
+        <p>🎫 議決権 <span class="var-name">state.resources.votingRights</span> : <span id="val-ticket">0</span></p>
+        <hr>
+        <p>[Statistics]</p>
+        <p>祈念実行回数 <span class="var-name">state.statistics.prayCount</span> : <span id="val-stat-pray">0</span></p>
+        <p>ガチャ開封数 <span class="var-name">state.statistics.gachaCount</span> : <span id="val-stat-gacha">0</span></p>
     </div>
 
     <div class="control-sector">
-        <h3>[ Actions ]</h3>
-        <button id="btn-click">Manual Click</button>
-        <button id="btn-upgrade">Buy Upgrade (Cost: 10)</button>
+        <h3>>>> ACTIONS</h3>
+        <button id="btn-pray">
+            [btn-pray] 祈念する<br>
+            <span style="color: #88ccff;">> state.resources.money += 1500; state.resources.creditStock += 5;</span>
+        </button>
+        <button id="btn-gacha">
+            [btn-gacha] 茶封筒を開封<br>
+            <span style="color: #88ccff;">> state.resources.envelopes -= 1; state.resources.votingRights += 1;</span>
+        </button>
         <hr>
-        <button id="btn-cheat">Cheat: +1000 Cookies</button>
+        <button id="btn-cheat">
+            [btn-cheat] デバッグ：封筒追加<br>
+            <span style="color: #ffaaaa;">> state.resources.envelopes += 10;</span>
+        </button>
+        
+        <div class="log-container" id="sys-log"></div>
     </div>
 
-    <script type="module" src="main.js"></script>
+    <!-- 
+    ========================================================
+      ↓ ここから下のスクリプトが main.js の中身 ↓
+    ======================================================== 
+    -->
+    <script type="module">
+        // --- 1. 唯一の真実（データ構造） ---
+        const state = {
+            resources: {
+                money: 100000,
+                creditStock: 50,
+                envelopes: 5,
+                votingRights: 0
+            },
+            statistics: {
+                prayCount: 0,
+                gachaCount: 0
+            }
+        };
+
+        // --- 2. 画面更新の憲法（UI反映関数） ---
+        function updateUI() {
+            document.getElementById('val-money').innerText = state.resources.money.toLocaleString();
+            document.getElementById('val-stock').innerText = state.resources.creditStock;
+            document.getElementById('val-envelope').innerText = state.resources.envelopes;
+            document.getElementById('val-ticket').innerText = state.resources.votingRights;
+            
+            document.getElementById('val-stat-pray').innerText = state.statistics.prayCount;
+            document.getElementById('val-stat-gacha').innerText = state.statistics.gachaCount;
+        }
+
+        // デバッグ用ログ出力関数（変数ハイライト自動化）
+        function systemLog(msg) {
+            const logArea = document.getElementById('sys-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            
+            // "state." から始まる単語を見つけて自動的に青文字クラス(<span class="var-name">)を付与する
+            const formattedMsg = msg.replace(/(state\.[a-zA-Z0-9.]+)/g, '<span class="var-name">$1</span>');
+            
+            entry.innerHTML = `<span class="log-time">[${timeStr}]</span> > ${formattedMsg}`;
+            logArea.prepend(entry);
+        }
+
+        // --- 3. アクション（ロジック） ---
+
+        document.getElementById('btn-pray').onclick = () => {
+            // 実際の処理
+            state.resources.money += 1500;
+            state.resources.creditStock += 5;
+            state.statistics.prayCount += 1;
+            
+            // ログにはソースコードをそのまま文字列としてコピペして渡す
+            systemLog("state.resources.money += 1500; state.resources.creditStock += 5; state.statistics.prayCount += 1;");
+            updateUI();
+        };
+
+        document.getElementById('btn-gacha').onclick = () => {
+            if (state.resources.envelopes > 0) {
+                state.resources.envelopes -= 1;
+                state.resources.votingRights += 1;
+                state.statistics.gachaCount += 1;
+                
+                systemLog("state.resources.envelopes -= 1; state.resources.votingRights += 1; state.statistics.gachaCount += 1;");
+                updateUI();
+            } else {
+                systemLog("// Error: state.resources.envelopes is 0");
+            }
+        };
+
+        document.getElementById('btn-cheat').onclick = () => {
+            state.resources.envelopes += 10;
+            systemLog("state.resources.envelopes += 10;");
+            updateUI();
+        }
+
+        systemLog("// System Initialized");
+        updateUI();
+    </script>
 </body>
 </html>
