@@ -137,7 +137,7 @@
         <div class="sector">
             <h3>>>> VISUAL MONITOR (表示確認用)</h3>
             <p>💴 資金: <span id="ui-money" class="highlight">0</span></p>
-            <p>🛡️ 在庫: <span id="ui-stock" class="highlight">0</span></p>
+            <p>⚡ パケット: <span id="ui-communication-packet" class="highlight">0</span></p>
             <p>✉️ 封筒: <span id="ui-envelope" class="highlight">0</span></p>
             <p>🎫 議決権: <span id="ui-voting-rights" class="highlight">0</span></p>
             <hr>
@@ -172,8 +172,8 @@
         const MASTER = {
             // 祈念システム関連
             PRAY_DURATION: 10,
-            PRAY_REWARD_MONEY: 1500,
-            PRAY_REWARD_STOCK: 5,
+            PRAY_REWARD_MONEY: 1500, // 祈念で獲得する資金
+            PRAY_REWARD_COMMUNICATION_PACKET: 10, // 祈念で獲得する通信パケット
 
             // キャラクターマスターデータ
             CHARACTERS: [
@@ -184,14 +184,16 @@
                     name: "ロングちゃん",
                     uniqueSkillTitle: "希望のひかり",
                     rarity: 3, // ★★★
-                    type: "精霊",
-                    maxHp: 250,
-                    maxPp: 300,
+                    type: "精霊", // 種別（属性）
+                    maxMargin: 250, // 証拠金（旧HP）の最大値
+                    maxFatigue: 100, // 疲労度（旧MP）の最大値
+                    maxPacketPoint: 300, // パケットポイント（旧PP）の最大値
                     luck: 70,
-                    evasion: 80,
-                    equipmentSlot1: "注文詠唱 Type-L",
-                    equipmentSlot2: null,
-                    equipmentSlot3: null,
+                    evasion: 80, // 基本の回避
+                    numEquipSlots: 3, // 装備スロット数
+                    initialEquips: [ // 初期装備品
+                        { slotIndex: 0, itemId: "equip_001" } // 注文詠唱 Type-L
+                    ],
                     initialExp: 0,
                     description: "笑顔が増える希望のひかり、精霊界のアイドル！",
                     notes: "初期キャラとして"
@@ -203,14 +205,16 @@
                     name: "ショートちゃん",
                     uniqueSkillTitle: "お願い下がって",
                     rarity: 3, // ★★★
-                    type: "精霊",
-                    maxHp: 250,
-                    maxPp: 300,
+                    type: "精霊", // 種別（属性）
+                    maxMargin: 250, // 証拠金（旧HP）の最大値
+                    maxFatigue: 100, // 疲労度（旧MP）の最大値
+                    maxPacketPoint: 300, // パケットポイント（旧PP）の最大値
                     luck: 70,
-                    evasion: 80,
-                    equipmentSlot1: "注文詠唱 Type-S",
-                    equipmentSlot2: null,
-                    equipmentSlot3: null,
+                    evasion: 80, // 基本の回避
+                    numEquipSlots: 3, // 装備スロット数
+                    initialEquips: [ // 初期装備品
+                        { slotIndex: 0, itemId: "equip_002" } // 注文詠唱 Type-S
+                    ],
                     initialExp: 0,
                     description: "",
                     notes: "初期キャラとして"
@@ -222,14 +226,16 @@
                     name: "優待ママ",
                     uniqueSkillTitle: "空虚な頭",
                     rarity: 1, // ★
-                    type: "人間（専業）",
-                    maxHp: 70,
-                    maxPp: 100,
+                    type: "人間（専業）", // 種別（属性）
+                    maxMargin: 70, // 証拠金（旧HP）の最大値
+                    maxFatigue: 100, // 疲労度（旧MP）の最大値
+                    maxPacketPoint: 100, // パケットポイント（旧PP）の最大値
                     luck: 50,
-                    evasion: 50,
-                    equipmentSlot1: "小型通信端末 SE-III",
-                    equipmentSlot2: null,
-                    equipmentSlot3: null,
+                    evasion: 50, // 基本の回避
+                    numEquipSlots: 2, // 装備スロット数
+                    initialEquips: [ // 初期装備品
+                        { slotIndex: 0, itemId: "equip_003" } // 小型通信端末 SE-III
+                    ],
                     initialExp: 0,
                     description: "",
                     notes: "いわゆるザコMOB"
@@ -241,14 +247,16 @@
                     name: "優待パパ",
                     uniqueSkillTitle: "トイレ注文",
                     rarity: 1, // ★
-                    type: "人間（会社員）",
-                    maxHp: 70,
-                    maxPp: 100,
+                    type: "人間（会社員）", // 種別（属性）
+                    maxMargin: 70, // 証拠金（旧HP）の最大値
+                    maxFatigue: 100, // 疲労度（旧MP）の最大値
+                    maxPacketPoint: 100, // パケットポイント（旧PP）の最大値
                     luck: 50,
-                    evasion: 50,
-                    equipmentSlot1: "汎用通信端末 Type-R",
-                    equipmentSlot2: null,
-                    equipmentSlot3: null,
+                    evasion: 50, // 基本の回避
+                    numEquipSlots: 2, // 装備スロット数
+                    initialEquips: [ // 初期装備品
+                        { slotIndex: 0, itemId: "equip_004" } // 汎用通信端末 Type-R
+                    ],
                     initialExp: 0,
                     description: "",
                     notes: "いわゆるザコMOB"
@@ -260,14 +268,17 @@
                     name: "風花",
                     uniqueSkillTitle: "風説の流布",
                     rarity: 2, // ★★
-                    type: "人間（アイドル）",
-                    maxHp: 120,
-                    maxPp: 200,
+                    type: "人間（アイドル）", // 種別（属性）
+                    maxMargin: 120, // 証拠金（旧HP）の最大値
+                    maxFatigue: 100, // 疲労度（旧MP）の最大値
+                    maxPacketPoint: 200, // パケットポイント（旧PP）の最大値
                     luck: 80,
-                    evasion: 70,
-                    equipmentSlot1: "標準演算端末 Mk.II",
-                    equipmentSlot2: "全自動注文プログラム F-ks",
-                    equipmentSlot3: null,
+                    evasion: 70, // 基本の回避
+                    numEquipSlots: 3, // 装備スロット数
+                    initialEquips: [ // 初期装備品
+                        { slotIndex: 0, itemId: "equip_005" }, // 標準演算端末 W10
+                        { slotIndex: 1, itemId: "equip_007" }  // 全自動注文プログラム F-ks
+                    ],
                     initialExp: 0,
                     description: "",
                     notes: "初回限定特典配布"
@@ -279,14 +290,17 @@
                     name: "健忘爺",
                     uniqueSkillTitle: "俺は県知事やぞ",
                     rarity: 2, // ★★
-                    type: "人間（ヴィラン）",
-                    maxHp: 160,
-                    maxPp: 180,
+                    type: "人間（ヴィラン）", // 種別（属性）
+                    maxMargin: 160, // 証拠金（旧HP）の最大値
+                    maxFatigue: 100, // 疲労度（旧MP）の最大値
+                    maxPacketPoint: 180, // パケットポイント（旧PP）の最大値
                     luck: 20,
-                    evasion: 90,
-                    equipmentSlot1: "標準演算端末 Mk.II",
-                    equipmentSlot2: "高速注文プログラム 松",
-                    equipmentSlot3: null,
+                    evasion: 90, // 基本の回避
+                    numEquipSlots: 3, // 装備スロット数
+                    initialEquips: [ // 初期装備品
+                        { slotIndex: 0, itemId: "equip_005" }, // 標準演算端末 W10
+                        { slotIndex: 1, itemId: "equip_008" }  // 高速注文プログラム 松
+                    ],
                     initialExp: 0,
                     description: "",
                     notes: "初回限定特典配布"
@@ -294,8 +308,9 @@
             ],
 
             // 優待品マスターデータ
-            ITEMS: [
+            CONSUMABLES: [ // 消費アイテムマスターデータ
                 {
+                    // Cuoカード（青）
                     id: "items_001",
                     imagePath: "items_001.png",
                     emoji: "💳",
@@ -303,11 +318,11 @@
                     type: "Cuoカード",
                     rarity: 1, // ★
                     value: 500,
-                    mpRecovery: null,
                     description: "",
                     gachaWeight_brownEnvelope: 10 // 茶封筒開封時の重み
                 },
                 {
+                    // Cuoカード（赤）
                     id: "items_002",
                     imagePath: "items_002.png",
                     emoji: "💳",
@@ -315,11 +330,11 @@
                     type: "Cuoカード",
                     rarity: 1, // ★
                     value: 1000,
-                    mpRecovery: null,
                     description: "",
                     gachaWeight_brownEnvelope: 5
                 },
                 {
+                    // Cuoカード（緑）
                     id: "items_003",
                     imagePath: "items_003.png",
                     emoji: "💳",
@@ -327,11 +342,11 @@
                     type: "Cuoカード",
                     rarity: 2, // ★★
                     value: 2000,
-                    mpRecovery: null,
                     description: "",
                     gachaWeight_brownEnvelope: 2
                 },
                 {
+                    // Cuoカード（黄）
                     id: "items_004",
                     imagePath: "items_004.png",
                     emoji: "💳",
@@ -339,9 +354,124 @@
                     type: "Cuoカード",
                     rarity: 2, // ★★
                     value: 3000,
-                    mpRecovery: null,
                     description: "",
                     gachaWeight_brownEnvelope: 1
+                }
+            ],
+
+            // 装備品マスターデータ
+            EQUIPS: [
+                {
+                    id: "equip_001",
+                    imagePath: "equip_001.png",
+                    emoji: "⭐",
+                    name: "注文詠唱 Type-L",
+                    type: "術式", // 種別
+                    rarity: 1, // ★
+                    singleFirepower: 30,
+                    burstCount: 3,
+                    latency: 1.00,
+                    communicationVolume: 10,
+                    description: "",
+                    notes: "初期装備"
+                },
+                {
+                    id: "equip_002",
+                    imagePath: "equip_002.png",
+                    emoji: "⭐",
+                    name: "注文詠唱 Type-S",
+                    type: "術式",
+                    rarity: 1,
+                    singleFirepower: 100,
+                    burstCount: 1,
+                    latency: 1.00,
+                    communicationVolume: 10,
+                    description: "",
+                    notes: "初期装備"
+                },
+                {
+                    id: "equip_003",
+                    imagePath: "equip_003.png",
+                    emoji: "📱",
+                    name: "小型通信端末 SE-III",
+                    type: "携帯通信端末",
+                    rarity: 1,
+                    singleFirepower: 80,
+                    burstCount: 1,
+                    latency: 5.00,
+                    communicationVolume: 20,
+                    description: "",
+                    notes: "初期装備"
+                },
+                {
+                    id: "equip_004",
+                    imagePath: "equip_004.png",
+                    emoji: "📱",
+                    name: "汎用通信端末 Type-R",
+                    type: "携帯通信端末",
+                    rarity: 1,
+                    singleFirepower: 20,
+                    burstCount: 4,
+                    latency: 5.00,
+                    communicationVolume: 20,
+                    description: "",
+                    notes: "初期装備"
+                },
+                {
+                    id: "equip_005",
+                    imagePath: "equip_005.png",
+                    emoji: "💻",
+                    name: "標準演算端末 W10",
+                    type: "通信端末",
+                    rarity: 2,
+                    singleFirepower: 100,
+                    burstCount: 2,
+                    latency: 3.00,
+                    communicationVolume: 30,
+                    description: "",
+                    notes: "初期装備"
+                },
+                {
+                    id: "equip_006",
+                    imagePath: "equip_006.png",
+                    emoji: "💻",
+                    name: "標準演算端末 W11",
+                    type: "通信端末",
+                    rarity: 2,
+                    singleFirepower: 110,
+                    burstCount: 2,
+                    latency: 3.00,
+                    communicationVolume: 30,
+                    description: "",
+                    notes: "初期装備"
+                },
+                {
+                    id: "equip_007",
+                    imagePath: "equip_007.png",
+                    emoji: "📶",
+                    name: "全自動注文プログラム F-ks",
+                    type: "プログラム",
+                    rarity: 3,
+                    singleFirepower: 20,
+                    burstCount: 10,
+                    latency: 1.50,
+                    communicationVolume: 50,
+                    description: "",
+                    notes: "初期装備"
+                },
+                {
+                    id: "equip_008",
+                    imagePath: "equip_008.png",
+                    emoji: "📶",
+                    name: "高速注文プログラム 松",
+                    type: "プログラム",
+                    rarity: 3,
+                    singleFirepower: 12,
+                    burstCount: 20,
+                    latency: 0.80,
+                    communicationVolume: 50,
+                    description: "",
+                    notes: "初期装備"
                 }
             ]
         };
@@ -349,11 +479,15 @@
         // --- 2. STATE (変動データ) ---
         const state = {
             resources: {
-                money: 100000,
-                creditStock: 50,
+                money: 100000, // 資金
+                communicationPacket: 50, // 通信パケット (旧creditStock)
                 envelopes: 5,
-                votingRights: 0 // README.md に基づき追加
+                votingRights: 0 // 議決権
             },
+            characters: [ // 所持キャラクターの動的な状態
+                // ここに chra_001 のようなキャラクターインスタンスが格納される
+                // 例: { id: "chara_001", currentMargin: 250, currentFatigue: 0, currentPacketPoint: 300, currentExp: 0 }
+            ], // ここに閉じ角括弧を追加
             pray: {
                 isRunning: false,
                 elapsed: 0,
@@ -371,8 +505,8 @@
         // --- 3. UI RENDERER (画面表示) ---
         function updateUI() {
             // 左パネルの表示更新
-            document.getElementById('ui-money').innerText = state.resources.money.toLocaleString();
-            document.getElementById('ui-stock').innerText = state.resources.creditStock;
+            document.getElementById('ui-money').innerText = state.resources.money.toLocaleString(); // 資金
+            document.getElementById('ui-communication-packet').innerText = state.resources.communicationPacket.toLocaleString(); // 通信パケット
             document.getElementById('ui-envelope').innerText = state.resources.envelopes.toLocaleString(); // 桁区切り追加
             document.getElementById('ui-voting-rights').innerText = state.resources.votingRights.toLocaleString(); // 新規追加
 
@@ -385,14 +519,21 @@
             document.getElementById('btn-pray').disabled = state.pray.isRunning || state.pray.isComplete;
             document.getElementById('btn-settle').disabled = !state.pray.isComplete;
 
+            // ヘルパー関数: マスターデータからアイテムを検索
+            // CONSUMABLESとEQUIPSの両方から検索
+            const findMasterItem = (id) => {
+                return MASTER.CONSUMABLES.find(mItem => mItem.id === id) || MASTER.EQUIPS.find(mItem => mItem.id === id);
+            };
+
             // インベントリ表示
             const inventoryElement = document.getElementById('ui-inventory');
             inventoryElement.innerHTML = ''; // 以前の内容をクリア
             if (state.inventory.items.length === 0) {
                 inventoryElement.innerText = "アイテムなし";
-            } else {
+            } else { // 変更: CONSUMABLESとEQUIPSの両方から検索
+                // CONSUMABLESから検索
                 state.inventory.items.forEach(invItem => {
-                    const masterItem = MASTER.ITEMS.find(mItem => mItem.id === invItem.id);
+                    const masterItem = findMasterItem(invItem.id); // findMasterItem を使用してマスターアイテムを取得
                     if (masterItem) {
                         const itemEntry = document.createElement('div');
                         itemEntry.innerText = `${masterItem.emoji} ${masterItem.name} x${invItem.quantity}`;
@@ -460,11 +601,11 @@
 
         document.getElementById('btn-settle').onclick = () => {
             if (state.pray.isComplete) {
-                state.resources.money += MASTER.PRAY_REWARD_MONEY;
-                state.resources.creditStock += MASTER.PRAY_REWARD_STOCK;
+                state.resources.money += MASTER.PRAY_REWARD_MONEY; // 資金獲得
+                state.resources.communicationPacket += MASTER.PRAY_REWARD_COMMUNICATION_PACKET; // 通信パケット獲得
                 state.pray.isComplete = false; // 完了状態をリセット
                 state.pray.elapsed = 0; // 経過時間をリセット
-                pushLog(`state.resources.money += ${MASTER.PRAY_REWARD_MONEY}; state.resources.creditStock += ${MASTER.PRAY_REWARD_STOCK}; state.pray.isComplete = false; state.pray.elapsed = 0; // 報酬受け取り`);
+                pushLog(`state.resources.money += ${MASTER.PRAY_REWARD_MONEY}; state.resources.communicationPacket += ${MASTER.PRAY_REWARD_COMMUNICATION_PACKET}; state.pray.isComplete = false; state.pray.elapsed = 0; // 報酬受け取り`);
                 updateUI();
             }
         };
@@ -476,7 +617,7 @@
                 state.statistics.gachaCount += 1; // 統計を更新
 
                 // 茶封筒から排出されるアイテムのリストと重みを取得
-                const brownEnvelopeItems = MASTER.ITEMS.filter(item => item.gachaWeight_brownEnvelope !== undefined)
+                const brownEnvelopeItems = MASTER.CONSUMABLES.filter(item => item.gachaWeight_brownEnvelope !== undefined) // 変更: CONSUMABLESから抽選
                                                        .map(item => ({ ...item, weight: item.gachaWeight_brownEnvelope }));
 
                 const drawnItem = drawItemByWeight(brownEnvelopeItems);
@@ -488,6 +629,7 @@
                     logMessage += `state.resources.votingRights += 1; `;
 
                     // 獲得したアイテムをインベントリに追加/更新
+                    // findMasterItem は updateUI() のスコープで定義されているため、ここでは再定義しない
                     const itemQuantityForLog = (state.inventory.items.find(item => item.id === drawnItem.id)?.quantity || 0) + 1;
                     const itemLogText = `${drawnItem.emoji} ${drawnItem.name} x${itemQuantityForLog}`;
                     let inventoryItem = state.inventory.items.find(item => item.id === drawnItem.id);
