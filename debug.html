@@ -1,97 +1,366 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <title>Debug Manager - 精霊クロス伝説</title>
+    <title>Debug Manager - 精霊クロス伝説</title> 
     <!--
     ==========================================================================
-    【 DEV_MODE: 開発方針＆意図メモ 】
-    ・本ファイルはロジック構築・動作確認専用の「Logic Console」である。
-    ・ログ出力は日本語に翻訳せず「ソースコードそのまま」を表示させる。
-    ・変数名は青文字などの装飾を用い、どの値が変化したか一目でわかるようにする。
-    ・緑色文字：一般ユーザーが視認する数字などの値
-    ・UIの見た目（index.html）の作り込みは後回しにし、まずは状態(state)の管理を優先する。
+    【 DEV_MODE: 開発方針＆意図メモ、ここは絶対消さないで～  】
+    ・本ファイルはロジック構築・動作確認専用の「Logic Console」である。 
+        ・UIの見た目（index.html）の作り込みは後回しにし、まずは状態(state)の管理を優先する。
     ==========================================================================
     -->
     <style>
-        /* デバッグ用のプレーンで無骨なデザイン */
-        body { font-family: monospace; background-color: #1a1a1a; color: #00ff00; padding: 20px; }
-        h1 { font-size: 20px; color: #fff; border-bottom: 1px solid #555; padding-bottom: 10px;}
-        .monitor-sector { border: 1px solid #333; padding: 15px; margin-bottom: 15px; background-color: #0a0a0a; }
-        .control-sector { border: 1px solid #333; padding: 15px; background-color: #0a0a0a; }
-        
-        button { 
-            display: block; width: 100%; text-align: left; 
-            background: #2a2a2a; color: #fff; border: 1px solid #555; 
-            cursor: pointer; padding: 10px 15px; margin: 8px 0; 
-            font-family: monospace; font-size: 14px;
+        body {
+            font-family: monospace;
+            background-color: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
         }
-        button:hover { background: #444; border-color: #00ff00; }
-        button:disabled { color: #666; cursor: not-allowed; }
-        
-        .log-container { 
-            margin-top: 15px; background: #000; border: 1px solid #333; 
-            height: 200px; overflow-y: auto; padding: 10px; 
+
+        .left-panel {
+            flex: 1;
         }
-        .log-entry { 
-            color: #ccc; font-size: 13px; margin-bottom: 4px; 
-            border-bottom: 1px dashed #222; padding-bottom: 4px;
+
+        .right-panel {
+            width: 350px;
         }
-        .log-time { color: #00ff00; margin-right: 10px; }
-        
-        hr { border-color: #333; margin: 15px 0; }
-        
-        /* 変数名（青文字）のスタイル */
-        .var-name { color: #88ccff; font-weight: bold; }
+
+        h1 {
+            font-size: 18px;
+            color: #fff;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h3 {
+            font-size: 14px;
+            color: #88ccff;
+            margin-bottom: 10px;
+        }
+
+        .sector {
+            border: 1px solid #333;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #0a0a0a;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #555;
+            cursor: pointer;
+            padding: 10px;
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        button:hover:not(:disabled) {
+            background: #444;
+            border-color: #00ff00;
+        }
+
+        button:disabled {
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        /* プログレスバー */
+        .progress-bg {
+            background: #333;
+            height: 8px;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            background: #00ff00;
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s;
+        }
+
+        /* ログ・データ表示 */
+        .data-view {
+            background: #000;
+            color: #ffca28;
+            /* オレンジ色で見やすく */
+            font-size: 12px;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+        }
+
+        .action-log {
+            height: 150px;
+            background: #000;
+            border: 1px solid #333;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .log-time {
+            color: #00ff00;
+            margin-right: 5px;
+        }
+
+        .highlight {
+            color: #fff;
+            font-weight: bold;
+        }
+    </style>
+    <style>
+        /* ログ内のコードハイライト用 */
+        .log-code-highlight {
+            color: #88ccff; /* 青系の色でハイライト */
+        }
     </style>
 </head>
+
 <body>
-    <h1>[ DEV_MODE ] 精霊クロス伝説 - Logic Console</h1>
+    <div class="left-panel">
+        <h1>[ DEV_MODE ] 精霊クロス伝説 - Logic Console</h1>
 
-    <div class="monitor-sector">
-        <h3>>>> STATE MONITOR</h3>
-        <p>💴 資金 <span class="var-name">state.resources.money</span> : <span id="val-money">0</span></p>
-        <p>🛡️ 信用在庫 <span class="var-name">state.resources.creditStock</span> : <span id="val-stock">0</span></p>
-        <p>✉️ ガチャ封筒 <span class="var-name">state.resources.envelopes</span> : <span id="val-envelope">0</span></p>
-        <p>🎫 議決権 <span class="var-name">state.resources.votingRights</span> : <span id="val-ticket">0</span></p>
-        <hr>
-        <p>[Statistics]</p>
-        <p>祈念実行回数 <span class="var-name">state.statistics.prayCount</span> : <span id="val-stat-pray">0</span></p>
-        <p>ガチャ開封数 <span class="var-name">state.statistics.gachaCount</span> : <span id="val-stat-gacha">0</span></p>
+        <div class="sector">
+            <h3>>>> VISUAL MONITOR (表示確認用)</h3>
+            <p>💴 資金: <span id="ui-money" class="highlight">0</span></p>
+            <p>🛡️ 在庫: <span id="ui-stock" class="highlight">0</span></p>
+            <p>✉️ 封筒: <span id="ui-envelope" class="highlight">0</span></p>
+            <p>🎫 議決権: <span id="ui-voting-rights" class="highlight">0</span></p>
+            <hr>
+            <p>所持アイテム:</p>
+            <div id="ui-inventory" style="font-size: 12px; max-height: 80px; overflow-y: auto; border: 1px solid #333; padding: 5px; background-color: #000;"></div>
+            <hr>
+            <p>祈念状態: <span id="ui-pray-status">待機中</span> (<span id="ui-pray-time">0</span>秒経過)</p>
+            <div class="progress-bg">
+                <div id="ui-pray-progress" class="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="sector">
+            <h3>>>> ACTIONS (操作)</h3>
+            <button id="btn-pray">ACTION: 祈念を開始する (10秒待機)</button>
+            <button id="btn-settle" disabled>ACTION: 現渡（報酬を受け取る）</button>
+            <button id="btn-gacha">ACTION: 封筒を開封する</button>
+            <button id="btn-cheat">DEBUG: 封筒を+10する</button>
+        </div>
+
+        <h3>>>> ACTION LOG (行動履歴)</h3>
+        <div id="action-log" class="action-log"></div>
     </div>
 
-    <div class="control-sector">
-        <h3>>>> ACTIONS</h3>
-        <button id="btn-pray">
-            [btn-pray] 祈念する<br>
-            <span style="color: #88ccff;">> state.resources.money += 1500; state.resources.creditStock += 5;</span>
-        </button>
-        <button id="btn-gacha">
-            [btn-gacha] 茶封筒を開封<br>
-            <span style="color: #88ccff;">> state.resources.envelopes -= 1; state.resources.votingRights += 1;</span>
-        </button>
-        <hr>
-        <button id="btn-cheat">
-            [btn-cheat] デバッグ：封筒追加<br>
-            <span style="color: #ffaaaa;">> state.resources.envelopes += 10;</span>
-        </button>
-        
-        <div class="log-container" id="sys-log"></div>
+    <div class="right-panel">
+        <h3>>>> RAW STATE DATA (真実のデータ)</h3>
+        <div id="raw-data" class="data-view"></div>
     </div>
 
-    <!-- 
-    ========================================================
-      ↓ ここから下のスクリプトが main.js の中身 ↓
-    ======================================================== 
-    -->
     <script type="module">
-        // --- 1. 唯一の真実（データ構造） ---
+        // --- 1. MASTER (固定ルール) ---
+        const MASTER = {
+            // 祈念システム関連
+            PRAY_DURATION: 10,
+            PRAY_REWARD_MONEY: 1500,
+            PRAY_REWARD_STOCK: 5,
+
+            // キャラクターマスターデータ
+            CHARACTERS: [
+                {
+                    id: "chara_001",
+                    imagePath: "chara_001.png",
+                    emoji: "💕",
+                    name: "ロングちゃん",
+                    uniqueSkillTitle: "希望のひかり",
+                    rarity: 3, // ★★★
+                    type: "精霊",
+                    maxHp: 250,
+                    maxPp: 300,
+                    luck: 70,
+                    evasion: 80,
+                    equipmentSlot1: "注文詠唱 Type-L",
+                    equipmentSlot2: null,
+                    equipmentSlot3: null,
+                    initialExp: 0,
+                    description: "笑顔が増える希望のひかり、精霊界のアイドル！",
+                    notes: "初期キャラとして"
+                },
+                {
+                    id: "chara_002",
+                    imagePath: "chara_002.png",
+                    emoji: "💕",
+                    name: "ショートちゃん",
+                    uniqueSkillTitle: "お願い下がって",
+                    rarity: 3, // ★★★
+                    type: "精霊",
+                    maxHp: 250,
+                    maxPp: 300,
+                    luck: 70,
+                    evasion: 80,
+                    equipmentSlot1: "注文詠唱 Type-S",
+                    equipmentSlot2: null,
+                    equipmentSlot3: null,
+                    initialExp: 0,
+                    description: "",
+                    notes: "初期キャラとして"
+                },
+                {
+                    id: "chara_003",
+                    imagePath: "chara_003.png",
+                    emoji: "💕",
+                    name: "優待ママ",
+                    uniqueSkillTitle: "空虚な頭",
+                    rarity: 1, // ★
+                    type: "人間（専業）",
+                    maxHp: 70,
+                    maxPp: 100,
+                    luck: 50,
+                    evasion: 50,
+                    equipmentSlot1: "小型通信端末 SE-III",
+                    equipmentSlot2: null,
+                    equipmentSlot3: null,
+                    initialExp: 0,
+                    description: "",
+                    notes: "いわゆるザコMOB"
+                },
+                {
+                    id: "chara_004",
+                    imagePath: "chara_004.png",
+                    emoji: "💕",
+                    name: "優待パパ",
+                    uniqueSkillTitle: "トイレ注文",
+                    rarity: 1, // ★
+                    type: "人間（会社員）",
+                    maxHp: 70,
+                    maxPp: 100,
+                    luck: 50,
+                    evasion: 50,
+                    equipmentSlot1: "汎用通信端末 Type-R",
+                    equipmentSlot2: null,
+                    equipmentSlot3: null,
+                    initialExp: 0,
+                    description: "",
+                    notes: "いわゆるザコMOB"
+                },
+                {
+                    id: "chara_005",
+                    imagePath: "chara_005.png",
+                    emoji: "💕",
+                    name: "風花",
+                    uniqueSkillTitle: "風説の流布",
+                    rarity: 2, // ★★
+                    type: "人間（アイドル）",
+                    maxHp: 120,
+                    maxPp: 200,
+                    luck: 80,
+                    evasion: 70,
+                    equipmentSlot1: "標準演算端末 Mk.II",
+                    equipmentSlot2: "全自動注文プログラム F-ks",
+                    equipmentSlot3: null,
+                    initialExp: 0,
+                    description: "",
+                    notes: "初回限定特典配布"
+                },
+                {
+                    id: "chara_006",
+                    imagePath: "chara_006.png",
+                    emoji: "💕",
+                    name: "健忘爺",
+                    uniqueSkillTitle: "俺は県知事やぞ",
+                    rarity: 2, // ★★
+                    type: "人間（ヴィラン）",
+                    maxHp: 160,
+                    maxPp: 180,
+                    luck: 20,
+                    evasion: 90,
+                    equipmentSlot1: "標準演算端末 Mk.II",
+                    equipmentSlot2: "高速注文プログラム 松",
+                    equipmentSlot3: null,
+                    initialExp: 0,
+                    description: "",
+                    notes: "初回限定特典配布"
+                }
+            ],
+
+            // 優待品マスターデータ
+            ITEMS: [
+                {
+                    id: "items_001",
+                    imagePath: "items_001.png",
+                    emoji: "💳",
+                    name: "Cuoカード（青）",
+                    type: "Cuoカード",
+                    rarity: 1, // ★
+                    value: 500,
+                    mpRecovery: null,
+                    description: "",
+                    gachaWeight_brownEnvelope: 10 // 茶封筒開封時の重み
+                },
+                {
+                    id: "items_002",
+                    imagePath: "items_002.png",
+                    emoji: "💳",
+                    name: "Cuoカード（赤）",
+                    type: "Cuoカード",
+                    rarity: 1, // ★
+                    value: 1000,
+                    mpRecovery: null,
+                    description: "",
+                    gachaWeight_brownEnvelope: 5
+                },
+                {
+                    id: "items_003",
+                    imagePath: "items_003.png",
+                    emoji: "💳",
+                    name: "Cuoカード（緑）",
+                    type: "Cuoカード",
+                    rarity: 2, // ★★
+                    value: 2000,
+                    mpRecovery: null,
+                    description: "",
+                    gachaWeight_brownEnvelope: 2
+                },
+                {
+                    id: "items_004",
+                    imagePath: "items_004.png",
+                    emoji: "💳",
+                    name: "Cuoカード（黄）",
+                    type: "Cuoカード",
+                    rarity: 2, // ★★
+                    value: 3000,
+                    mpRecovery: null,
+                    description: "",
+                    gachaWeight_brownEnvelope: 1
+                }
+            ]
+        };
+
+        // --- 2. STATE (変動データ) ---
         const state = {
             resources: {
                 money: 100000,
                 creditStock: 50,
                 envelopes: 5,
-                votingRights: 0
+                votingRights: 0 // README.md に基づき追加
+            },
+            pray: {
+                isRunning: false,
+                elapsed: 0,
+                isComplete: false
+            },
+            inventory: { // 獲得したアイテムを管理
+                items: [] // { id: "item_id", quantity: 1 } の形式で格納
             },
             statistics: {
                 prayCount: 0,
@@ -99,67 +368,153 @@
             }
         };
 
-        // --- 2. 画面更新の憲法（UI反映関数） ---
+        // --- 3. UI RENDERER (画面表示) ---
         function updateUI() {
-            document.getElementById('val-money').innerText = state.resources.money.toLocaleString();
-            document.getElementById('val-stock').innerText = state.resources.creditStock;
-            document.getElementById('val-envelope').innerText = state.resources.envelopes;
-            document.getElementById('val-ticket').innerText = state.resources.votingRights;
-            
-            document.getElementById('val-stat-pray').innerText = state.statistics.prayCount;
-            document.getElementById('val-stat-gacha').innerText = state.statistics.gachaCount;
+            // 左パネルの表示更新
+            document.getElementById('ui-money').innerText = state.resources.money.toLocaleString();
+            document.getElementById('ui-stock').innerText = state.resources.creditStock;
+            document.getElementById('ui-envelope').innerText = state.resources.envelopes.toLocaleString(); // 桁区切り追加
+            document.getElementById('ui-voting-rights').innerText = state.resources.votingRights.toLocaleString(); // 新規追加
+
+            document.getElementById('ui-pray-status').innerText = state.pray.isRunning ? "進行中" : (state.pray.isComplete ? "完了（待機）" : "待機中");
+            document.getElementById('ui-pray-time').innerText = state.pray.elapsed;
+            const progress = (state.pray.elapsed / MASTER.PRAY_DURATION) * 100;
+            document.getElementById('ui-pray-progress').style.width = progress + "%";
+
+            // ボタンの有効・無効管理
+            document.getElementById('btn-pray').disabled = state.pray.isRunning || state.pray.isComplete;
+            document.getElementById('btn-settle').disabled = !state.pray.isComplete;
+
+            // インベントリ表示
+            const inventoryElement = document.getElementById('ui-inventory');
+            inventoryElement.innerHTML = ''; // 以前の内容をクリア
+            if (state.inventory.items.length === 0) {
+                inventoryElement.innerText = "アイテムなし";
+            } else {
+                state.inventory.items.forEach(invItem => {
+                    const masterItem = MASTER.ITEMS.find(mItem => mItem.id === invItem.id);
+                    if (masterItem) {
+                        const itemEntry = document.createElement('div');
+                        itemEntry.innerText = `${masterItem.emoji} ${masterItem.name} x${invItem.quantity}`;
+                        inventoryElement.appendChild(itemEntry);
+                    }
+                });
+            }
+            // 右パネル：生のデータをそのまま表示
+            document.getElementById('raw-data').innerText = JSON.stringify(state, null, 4);
         }
 
-        // デバッグ用ログ出力関数（変数ハイライト自動化）
-        function systemLog(msg) {
-            const logArea = document.getElementById('sys-log');
+        /**
+         * 重みに基づいてアイテムを抽選する汎用関数
+         * @param {Array<Object>} items - 抽選対象のアイテム配列。各アイテムは 'weight' プロパティを持つこと。
+         * @returns {Object|null} 抽選されたアイテムオブジェクト、または抽選対象がない場合はnull
+         */
+        function drawItemByWeight(items) {
+            const totalWeight = items.reduce((sum, item) => sum + (item.weight || 0), 0);
+            if (totalWeight === 0) return null;
+
+            let random = Math.random() * totalWeight;
+            for (const item of items) {
+                if (random < (item.weight || 0)) {
+                    return item;
+                }
+                random -= (item.weight || 0);
+            }
+            return null; // 万が一のためのフォールバック
+        }
+        // ログ出力関数
+        // README.md の指示に基づき、コードスニペットを受け取り、state.変数をハイライトする
+        function pushLog(codeSnippet) {
+            const logArea = document.getElementById('action-log');
+            const time = new Date().toLocaleTimeString();
+            // state. で始まる変数をハイライト
+            const highlightedCode = codeSnippet.replace(/(state\.[a-zA-Z0-9_.]+)/g, '<span class="log-code-highlight">$1</span>');
             const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            
-            const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-            
-            // "state." から始まる単語を見つけて自動的に青文字クラス(<span class="var-name">)を付与する
-            const formattedMsg = msg.replace(/(state\.[a-zA-Z0-9.]+)/g, '<span class="var-name">$1</span>');
-            
-            entry.innerHTML = `<span class="log-time">[${timeStr}]</span> > ${formattedMsg}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${highlightedCode}`;
             logArea.prepend(entry);
         }
 
-        // --- 3. アクション（ロジック） ---
+        // --- 4. TIMER LOGIC (時間経過の仕組み) ---
+        setInterval(() => {
+            if (state.pray.isRunning) {
+                state.pray.elapsed += 1;
+                if (state.pray.elapsed >= MASTER.PRAY_DURATION) {
+                    state.pray.isRunning = false;
+                    state.pray.isComplete = true;
+                    pushLog("state.pray.isRunning = false; state.pray.isComplete = true; // 祈念完了");
+                }
+                updateUI();
+            }
+        }, 1000);
+
+        // --- 5. BUTTON ACTIONS (操作時の挙動) ---
 
         document.getElementById('btn-pray').onclick = () => {
-            // 実際の処理
-            state.resources.money += 1500;
-            state.resources.creditStock += 5;
-            state.statistics.prayCount += 1;
-            
-            // ログにはソースコードをそのまま文字列としてコピペして渡す
-            systemLog("state.resources.money += 1500; state.resources.creditStock += 5; state.statistics.prayCount += 1;");
+            state.pray.isRunning = true;
+            state.pray.elapsed = 0; // 経過時間をリセット
+            state.pray.isComplete = false; // 完了状態をリセット
+            state.statistics.prayCount += 1; // 統計を更新
+            pushLog("state.pray.isRunning = true; state.pray.elapsed = 0; state.pray.isComplete = false; state.statistics.prayCount += 1; // 祈念開始");
             updateUI();
+        };
+
+        document.getElementById('btn-settle').onclick = () => {
+            if (state.pray.isComplete) {
+                state.resources.money += MASTER.PRAY_REWARD_MONEY;
+                state.resources.creditStock += MASTER.PRAY_REWARD_STOCK;
+                state.pray.isComplete = false; // 完了状態をリセット
+                state.pray.elapsed = 0; // 経過時間をリセット
+                pushLog(`state.resources.money += ${MASTER.PRAY_REWARD_MONEY}; state.resources.creditStock += ${MASTER.PRAY_REWARD_STOCK}; state.pray.isComplete = false; state.pray.elapsed = 0; // 報酬受け取り`);
+                updateUI();
+            }
         };
 
         document.getElementById('btn-gacha').onclick = () => {
             if (state.resources.envelopes > 0) {
+                // 封筒開封時に議決権も増えるように変更 (sample.html と README.md に準拠)
                 state.resources.envelopes -= 1;
-                state.resources.votingRights += 1;
-                state.statistics.gachaCount += 1;
-                
-                systemLog("state.resources.envelopes -= 1; state.resources.votingRights += 1; state.statistics.gachaCount += 1;");
+                state.statistics.gachaCount += 1; // 統計を更新
+
+                // 茶封筒から排出されるアイテムのリストと重みを取得
+                const brownEnvelopeItems = MASTER.ITEMS.filter(item => item.gachaWeight_brownEnvelope !== undefined)
+                                                       .map(item => ({ ...item, weight: item.gachaWeight_brownEnvelope }));
+
+                const drawnItem = drawItemByWeight(brownEnvelopeItems);
+
+                let logMessage = `state.resources.envelopes -= 1; state.statistics.gachaCount += 1; `;
+                if (drawnItem) {
+                    // 議決権はアイテム獲得とは別に必ず増える
+                    state.resources.votingRights += 1;
+                    logMessage += `state.resources.votingRights += 1; `;
+
+                    // 獲得したアイテムをインベントリに追加/更新
+                    const itemQuantityForLog = (state.inventory.items.find(item => item.id === drawnItem.id)?.quantity || 0) + 1;
+                    const itemLogText = `${drawnItem.emoji} ${drawnItem.name} x${itemQuantityForLog}`;
+                    let inventoryItem = state.inventory.items.find(item => item.id === drawnItem.id);
+                    if (inventoryItem) {
+                        inventoryItem.quantity += 1;
+                        logMessage += `state.inventory.items.find(item => item.id === "${drawnItem.id}").quantity += 1; // 獲得: ${itemLogText}`;
+                    } else {
+                        state.inventory.items.push({ id: drawnItem.id, quantity: 1 });
+                        logMessage += `state.inventory.items.push({ id: "${drawnItem.id}", quantity: 1 }); // 獲得: ${itemLogText}`;
+                    }
+                } else {
+                    logMessage += `// 封筒を開封しましたが、アイテムは獲得できませんでした。`;
+                }
+                pushLog(logMessage);
                 updateUI();
-            } else {
-                systemLog("// Error: state.resources.envelopes is 0");
             }
         };
-
         document.getElementById('btn-cheat').onclick = () => {
             state.resources.envelopes += 10;
-            systemLog("state.resources.envelopes += 10;");
+            pushLog("state.resources.envelopes += 10; // デバッグ: 封筒追加");
             updateUI();
-        }
+        };
 
-        systemLog("// System Initialized");
+        // 起動時の初期表示
         updateUI();
+        pushLog("// システム起動");
     </script>
 </body>
+
 </html>
