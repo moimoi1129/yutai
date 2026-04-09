@@ -16,38 +16,61 @@
             font-family: monospace;
             background-color: #1a1a1a;
             color: #00ff00;
-            padding: 20px;
+            margin: 0;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            height: 100vh;
         }
 
-        .left-panel {
-            flex: 1;
-        }
-
-        .right-panel {
-            width: 350px;
+        header {
+            padding: 10px 20px;
+            background: #111;
+            border-bottom: 1px solid #333;
         }
 
         h1 {
             font-size: 18px;
             color: #fff;
-            border-bottom: 1px solid #555;
-            padding-bottom: 10px;
-            margin-top: 0;
+            margin: 0;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            gap: 15px;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #0f0f0f;
+            border: 1px solid #333;
+            padding: 15px;
+            overflow-y: auto;
+            min-width: 250px;
         }
 
         h3 {
             font-size: 14px;
             color: #88ccff;
+            margin-top: 0;
             margin-bottom: 10px;
+            border-bottom: 1px dashed #333;
+            padding-bottom: 5px;
         }
 
-        .sector {
-            border: 1px solid #333;
-            padding: 15px;
-            margin-bottom: 15px;
-            background-color: #0a0a0a;
+        p {
+            margin: 5px 0;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #333;
+            margin: 15px 0;
+            width: 100%;
         }
 
         button {
@@ -74,6 +97,17 @@
             cursor: not-allowed;
         }
 
+        .control-select, .control-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            background-color: #2a2a2a;
+            color: #fff;
+            border: 1px solid #555;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+
         /* プログレスバー */
         .progress-bg {
             background: #333;
@@ -93,17 +127,14 @@
         .data-view {
             background: #000;
             color: #ffca28;
-            /* オレンジ色で見やすく */
             font-size: 12px;
             padding: 10px;
-            height: 400px;
             overflow-y: auto;
             border: 1px solid #333;
             white-space: pre-wrap;
         }
 
         .action-log {
-            height: 150px;
             background: #000;
             border: 1px solid #333;
             overflow-y: auto;
@@ -121,541 +152,611 @@
             color: #fff;
             font-weight: bold;
         }
-    </style>
-    <style>
-        /* ログ内のコードハイライト用 */
+
         .log-code-highlight {
-            color: #88ccff; /* 青系の色でハイライト */
+            color: #88ccff;
         }
+        
+        .party-slot {
+            border: 1px solid #555;
+            padding: 5px;
+            margin-bottom: 5px;
+            background-color: #111;
+        }
+
+        /* ステータスバーと整列用のCSS */
+        .status-row { display: flex; align-items: center; margin-bottom: 4px; font-size: 12px; }
+        .status-label { width: 85px; color: #aaa; }
+        .status-value { width: 55px; text-align: right; margin-right: 8px; font-weight: bold; }
+        
+        .status-bar-bg { flex: 1; max-width: 100px; height: 6px; background: #333; }
+        .bar-fill-hp { height: 100%; background: #00ff00; }
+        .bar-fill-hp.warning { background: #ffaa00; }
+        .bar-fill-hp.danger { background: #ff0000; }
+        .bar-fill-mp { height: 100%; background: #ff66aa; } /* ピンク */
+        .bar-fill-pp { height: 100%; background: #ffcc00; } /* 黄色 */
+
+        /* バトルコンソール用 */
+        .battle-btn-group { display: flex; gap: 10px; }
+        .battle-btn-group button { flex: 1; text-align: center; }
     </style>
 </head>
 
 <body>
-    <div class="left-panel">
+    <header>
         <h1>[ DEV_MODE ] 精霊クロス伝説 - Logic Console</h1>
+    </header>
 
-        <div class="sector">
-            <h3>>>> VISUAL MONITOR (表示確認用)</h3>
+    <div class="main-container">
+        <!-- 列1: 基本情報＆ログ -->
+        <div class="panel">
+            <h3>>>> VISUAL MONITOR (基本情報)</h3>
             <p>💴 資金: <span id="ui-money" class="highlight">0</span></p>
             <p>⚡ パケット: <span id="ui-communication-packet" class="highlight">0</span></p>
             <p>✉️ 封筒: <span id="ui-envelope" class="highlight">0</span></p>
             <p>🎫 議決権: <span id="ui-voting-rights" class="highlight">0</span></p>
             <hr>
-            <p>所持アイテム:</p>
-            <div id="ui-inventory" style="font-size: 12px; max-height: 80px; overflow-y: auto; border: 1px solid #333; padding: 5px; background-color: #000;"></div>
-            <hr>
             <p>祈念状態: <span id="ui-pray-status">待機中</span> (<span id="ui-pray-time">0</span>秒経過)</p>
             <div class="progress-bg">
                 <div id="ui-pray-progress" class="progress-bar"></div>
             </div>
+            <hr>
+            <h3>>>> ACTION LOG (行動履歴)</h3>
+            <div id="action-log" class="action-log" style="flex: 1; min-height: 200px;"></div>
         </div>
 
-        <div class="sector">
-            <h3>>>> ACTIONS (操作)</h3>
+        <!-- 列2: キャラ＆アイテム画面 -->
+        <div class="panel">
+            <h3>>>> PARTY (現在の編成)</h3>
+            <div id="ui-party" class="data-view" style="flex: 0 0 auto; min-height: 120px; margin-bottom: 15px; color: #fff;"></div>
+
+            <h3>>>> CHARACTERS (所持キャラ)</h3>
+            <div id="ui-characters" class="data-view" style="flex: 1; margin-bottom: 15px; color: #fff;"></div>
+            
+            <h3>>>> INVENTORY (所持アイテム)</h3>
+            <div id="ui-inventory" class="data-view" style="flex: 1; color: #fff;"></div>
+        </div>
+
+        <!-- 列3: アクション画面 -->
+        <div class="panel">
+            <h3>>>> ACTIONS (基本操作)</h3>
             <button id="btn-pray">ACTION: 祈念を開始する (10秒待機)</button>
             <button id="btn-settle" disabled>ACTION: 現渡（報酬を受け取る）</button>
             <button id="btn-gacha">ACTION: 封筒を開封する</button>
+            <button id="btn-cheat-chara">DEBUG: キャラを獲得する</button>
             <button id="btn-cheat">DEBUG: 封筒を+10する</button>
+            <hr>
+            
+            <h3>>>> BATTLE ACTIONS (出撃操作)</h3>
+            <div style="background:#222; border:1px solid #ff5555; padding:10px;">
+                <p style="margin-top:0;">出現する敵:</p>
+                <select id="select-enemy" class="control-select">
+                    <option value="enemy_001">スライム株主 (HP: 200, 攻撃: 30, 回避: 10)</option>
+                    <option value="enemy_002">クレーマーおじさん (HP: 1200, 攻撃: 100, 回避: 5)</option>
+                </select>
+                
+                <!-- 戦闘ログ表示エリア -->
+                <div id="battle-log" class="data-view" style="height: 180px; margin-bottom:10px; background:#000; border-color:#ff5555;"></div>
+                
+                <button id="btn-battle-start" style="background-color: #551a1a; border-color: #ff5555;">ACTION: 出撃する (パケット消費: 10)</button>
+                <div class="battle-btn-group">
+                    <button id="btn-battle-next" disabled>ACTION: 追撃する (2巡目)</button>
+                    <button id="btn-battle-finish" disabled>ACTION: リザルトへ (撤退/勝利)</button>
+                </div>
+            </div>
+            <hr>
+
+            <h3>>>> PARTY ACTIONS (編成操作)</h3>
+            <p>キャラクター:</p>
+            <select id="select-chara-party" class="control-select">
+                <option value="">キャラクターを選択</option>
+            </select>
+            <p>編成スロット (0: 前衛, 1: 中衛, 2: 後衛):</p>
+            <select id="select-party-slot" class="control-select">
+                <option value="0">0: 前衛</option>
+                <option value="1">1: 中衛</option>
+                <option value="2">2: 後衛</option>
+            </select>
+            <button id="btn-party-set">ACTION: 編成にセットする</button>
+            <button id="btn-party-remove">ACTION: 編成から外す</button>
+            <hr>
+            <h3>>>> EQUIPMENT ACTIONS (装備操作)</h3>
+            <p>キャラクター:</p>
+            <select id="select-chara-equip" class="control-select">
+                <option value="">キャラクターを選択</option>
+            </select>
+            <p>アイテム (インベントリ内の装備品):</p>
+            <select id="select-item-equip" class="control-select">
+                <option value="">アイテムを選択</option>
+            </select>
+            <p>スロットインデックス (0, 1, 2...):</p>
+            <input type="number" id="input-slot-index" value="0" min="0" class="control-input">
+            <button id="btn-equip-swap">ACTION: 装備する / 交換する</button>
+            <button id="btn-unequip">ACTION: 装備を外す (インベントリへ)</button>
+            <hr>
+            <button id="btn-cheat-add-item">DEBUG: インベントリにアイテム追加</button>
         </div>
 
-        <h3>>>> ACTION LOG (行動履歴)</h3>
-        <div id="action-log" class="action-log"></div>
-    </div>
-
-    <div class="right-panel">
-        <h3>>>> RAW STATE DATA (真実のデータ)</h3>
-        <div id="raw-data" class="data-view"></div>
+        <!-- 列4: RAWデータ -->
+        <div class="panel">
+            <h3>>>> RAW STATE DATA (真実のデータ)</h3>
+            <div id="raw-data" class="data-view" style="flex: 1;"></div>
+        </div>
     </div>
 
     <script type="module">
         // --- 1. MASTER (固定ルール) ---
         const MASTER = {
-            // 祈念システム関連
             PRAY_DURATION: 10,
-            PRAY_REWARD_MONEY: 1500, // 祈念で獲得する資金
-            PRAY_REWARD_COMMUNICATION_PACKET: 10, // 祈念で獲得する通信パケット
+            PRAY_REWARD_MONEY: 1500,
+            PRAY_REWARD_COMMUNICATION_PACKET: 10,
 
-            // キャラクターマスターデータ
             CHARACTERS: [
-                {
-                    id: "chara_001",
-                    imagePath: "chara_001.png",
-                    emoji: "💕",
-                    name: "ロングちゃん",
-                    uniqueSkillTitle: "希望のひかり",
-                    rarity: 3, // ★★★
-                    type: "精霊", // 種別（属性）
-                    maxMargin: 250, // 証拠金（旧HP）の最大値
-                    maxFatigue: 100, // 疲労度（旧MP）の最大値
-                    maxPacketPoint: 300, // パケットポイント（旧PP）の最大値
-                    luck: 70,
-                    evasion: 80, // 基本の回避
-                    numEquipSlots: 3, // 装備スロット数
-                    initialEquips: [ // 初期装備品
-                        { slotIndex: 0, itemId: "equip_001" } // 注文詠唱 Type-L
-                    ],
-                    initialExp: 0,
-                    description: "笑顔が増える希望のひかり、精霊界のアイドル！",
-                    notes: "初期キャラとして"
-                },
-                {
-                    id: "chara_002",
-                    imagePath: "chara_002.png",
-                    emoji: "💕",
-                    name: "ショートちゃん",
-                    uniqueSkillTitle: "お願い下がって",
-                    rarity: 3, // ★★★
-                    type: "精霊", // 種別（属性）
-                    maxMargin: 250, // 証拠金（旧HP）の最大値
-                    maxFatigue: 100, // 疲労度（旧MP）の最大値
-                    maxPacketPoint: 300, // パケットポイント（旧PP）の最大値
-                    luck: 70,
-                    evasion: 80, // 基本の回避
-                    numEquipSlots: 3, // 装備スロット数
-                    initialEquips: [ // 初期装備品
-                        { slotIndex: 0, itemId: "equip_002" } // 注文詠唱 Type-S
-                    ],
-                    initialExp: 0,
-                    description: "",
-                    notes: "初期キャラとして"
-                },
-                {
-                    id: "chara_003",
-                    imagePath: "chara_003.png",
-                    emoji: "💕",
-                    name: "優待ママ",
-                    uniqueSkillTitle: "空虚な頭",
-                    rarity: 1, // ★
-                    type: "人間（専業）", // 種別（属性）
-                    maxMargin: 70, // 証拠金（旧HP）の最大値
-                    maxFatigue: 100, // 疲労度（旧MP）の最大値
-                    maxPacketPoint: 100, // パケットポイント（旧PP）の最大値
-                    luck: 50,
-                    evasion: 50, // 基本の回避
-                    numEquipSlots: 2, // 装備スロット数
-                    initialEquips: [ // 初期装備品
-                        { slotIndex: 0, itemId: "equip_003" } // 小型通信端末 SE-III
-                    ],
-                    initialExp: 0,
-                    description: "",
-                    notes: "いわゆるザコMOB"
-                },
-                {
-                    id: "chara_004",
-                    imagePath: "chara_004.png",
-                    emoji: "💕",
-                    name: "優待パパ",
-                    uniqueSkillTitle: "トイレ注文",
-                    rarity: 1, // ★
-                    type: "人間（会社員）", // 種別（属性）
-                    maxMargin: 70, // 証拠金（旧HP）の最大値
-                    maxFatigue: 100, // 疲労度（旧MP）の最大値
-                    maxPacketPoint: 100, // パケットポイント（旧PP）の最大値
-                    luck: 50,
-                    evasion: 50, // 基本の回避
-                    numEquipSlots: 2, // 装備スロット数
-                    initialEquips: [ // 初期装備品
-                        { slotIndex: 0, itemId: "equip_004" } // 汎用通信端末 Type-R
-                    ],
-                    initialExp: 0,
-                    description: "",
-                    notes: "いわゆるザコMOB"
-                },
-                {
-                    id: "chara_005",
-                    imagePath: "chara_005.png",
-                    emoji: "💕",
-                    name: "風花",
-                    uniqueSkillTitle: "風説の流布",
-                    rarity: 2, // ★★
-                    type: "人間（アイドル）", // 種別（属性）
-                    maxMargin: 120, // 証拠金（旧HP）の最大値
-                    maxFatigue: 100, // 疲労度（旧MP）の最大値
-                    maxPacketPoint: 200, // パケットポイント（旧PP）の最大値
-                    luck: 80,
-                    evasion: 70, // 基本の回避
-                    numEquipSlots: 3, // 装備スロット数
-                    initialEquips: [ // 初期装備品
-                        { slotIndex: 0, itemId: "equip_005" }, // 標準演算端末 W10
-                        { slotIndex: 1, itemId: "equip_007" }  // 全自動注文プログラム F-ks
-                    ],
-                    initialExp: 0,
-                    description: "",
-                    notes: "初回限定特典配布"
-                },
-                {
-                    id: "chara_006",
-                    imagePath: "chara_006.png",
-                    emoji: "💕",
-                    name: "健忘爺",
-                    uniqueSkillTitle: "俺は県知事やぞ",
-                    rarity: 2, // ★★
-                    type: "人間（ヴィラン）", // 種別（属性）
-                    maxMargin: 160, // 証拠金（旧HP）の最大値
-                    maxFatigue: 100, // 疲労度（旧MP）の最大値
-                    maxPacketPoint: 180, // パケットポイント（旧PP）の最大値
-                    luck: 20,
-                    evasion: 90, // 基本の回避
-                    numEquipSlots: 3, // 装備スロット数
-                    initialEquips: [ // 初期装備品
-                        { slotIndex: 0, itemId: "equip_005" }, // 標準演算端末 W10
-                        { slotIndex: 1, itemId: "equip_008" }  // 高速注文プログラム 松
-                    ],
-                    initialExp: 0,
-                    description: "",
-                    notes: "初回限定特典配布"
-                }
+                { id: "chara_001", imagePath: "chara_001.png", emoji: "💕", name: "ロングちゃん", rarity: 3, maxMargin: 250, maxFatigue: 100, maxPacketPoint: 300, luck: 70, evasion: 80, numEquipSlots: 3, initialEquips: [{ slotIndex: 0, itemId: "equip_001" }] },
+                { id: "chara_002", imagePath: "chara_002.png", emoji: "💕", name: "ショートちゃん", rarity: 3, maxMargin: 250, maxFatigue: 100, maxPacketPoint: 300, luck: 70, evasion: 80, numEquipSlots: 3, initialEquips: [{ slotIndex: 0, itemId: "equip_002" }] },
+                { id: "chara_003", imagePath: "chara_003.png", emoji: "💕", name: "優待ママ", rarity: 1, maxMargin: 70, maxFatigue: 100, maxPacketPoint: 100, luck: 50, evasion: 50, numEquipSlots: 2, initialEquips: [{ slotIndex: 0, itemId: "equip_003" }] },
+                { id: "chara_004", imagePath: "chara_004.png", emoji: "💕", name: "優待パパ", rarity: 1, maxMargin: 70, maxFatigue: 100, maxPacketPoint: 100, luck: 50, evasion: 50, numEquipSlots: 2, initialEquips: [{ slotIndex: 0, itemId: "equip_004" }] },
+                { id: "chara_005", imagePath: "chara_005.png", emoji: "💕", name: "風花", rarity: 2, maxMargin: 120, maxFatigue: 100, maxPacketPoint: 200, luck: 80, evasion: 70, numEquipSlots: 3, initialEquips: [{ slotIndex: 0, itemId: "equip_005" }, { slotIndex: 1, itemId: "equip_007" }] },
+                { id: "chara_006", imagePath: "chara_006.png", emoji: "💕", name: "健忘爺", rarity: 2, maxMargin: 160, maxFatigue: 100, maxPacketPoint: 180, luck: 20, evasion: 90, numEquipSlots: 3, initialEquips: [{ slotIndex: 0, itemId: "equip_005" }, { slotIndex: 1, itemId: "equip_008" }] }
             ],
 
-            // 優待品マスターデータ
-            CONSUMABLES: [ // 消費アイテムマスターデータ
-                {
-                    // Cuoカード（青）
-                    id: "items_001",
-                    imagePath: "items_001.png",
-                    emoji: "💳",
-                    name: "Cuoカード（青）",
-                    type: "Cuoカード",
-                    rarity: 1, // ★
-                    value: 500,
-                    description: "",
-                    gachaWeight_brownEnvelope: 10 // 茶封筒開封時の重み
-                },
-                {
-                    // Cuoカード（赤）
-                    id: "items_002",
-                    imagePath: "items_002.png",
-                    emoji: "💳",
-                    name: "Cuoカード（赤）",
-                    type: "Cuoカード",
-                    rarity: 1, // ★
-                    value: 1000,
-                    description: "",
-                    gachaWeight_brownEnvelope: 5
-                },
-                {
-                    // Cuoカード（緑）
-                    id: "items_003",
-                    imagePath: "items_003.png",
-                    emoji: "💳",
-                    name: "Cuoカード（緑）",
-                    type: "Cuoカード",
-                    rarity: 2, // ★★
-                    value: 2000,
-                    description: "",
-                    gachaWeight_brownEnvelope: 2
-                },
-                {
-                    // Cuoカード（黄）
-                    id: "items_004",
-                    imagePath: "items_004.png",
-                    emoji: "💳",
-                    name: "Cuoカード（黄）",
-                    type: "Cuoカード",
-                    rarity: 2, // ★★
-                    value: 3000,
-                    description: "",
-                    gachaWeight_brownEnvelope: 1
-                }
+            CONSUMABLES: [
+                { id: "items_001", imagePath: "items_001.png", emoji: "💳", name: "Cuoカード（青）", type: "Cuoカード", rarity: 1, value: 500, description: "", gachaWeight_brownEnvelope: 10 },
+                { id: "items_002", imagePath: "items_002.png", emoji: "💳", name: "Cuoカード（赤）", type: "Cuoカード", rarity: 1, value: 1000, description: "", gachaWeight_brownEnvelope: 5 }
             ],
 
-            // 装備品マスターデータ
             EQUIPS: [
-                {
-                    id: "equip_001",
-                    imagePath: "equip_001.png",
-                    emoji: "⭐",
-                    name: "注文詠唱 Type-L",
-                    type: "術式", // 種別
-                    rarity: 1, // ★
-                    singleFirepower: 30,
-                    burstCount: 3,
-                    latency: 1.00,
-                    communicationVolume: 10,
-                    description: "",
-                    notes: "初期装備"
-                },
-                {
-                    id: "equip_002",
-                    imagePath: "equip_002.png",
-                    emoji: "⭐",
-                    name: "注文詠唱 Type-S",
-                    type: "術式",
-                    rarity: 1,
-                    singleFirepower: 100,
-                    burstCount: 1,
-                    latency: 1.00,
-                    communicationVolume: 10,
-                    description: "",
-                    notes: "初期装備"
-                },
-                {
-                    id: "equip_003",
-                    imagePath: "equip_003.png",
-                    emoji: "📱",
-                    name: "小型通信端末 SE-III",
-                    type: "携帯通信端末",
-                    rarity: 1,
-                    singleFirepower: 80,
-                    burstCount: 1,
-                    latency: 5.00,
-                    communicationVolume: 20,
-                    description: "",
-                    notes: "初期装備"
-                },
-                {
-                    id: "equip_004",
-                    imagePath: "equip_004.png",
-                    emoji: "📱",
-                    name: "汎用通信端末 Type-R",
-                    type: "携帯通信端末",
-                    rarity: 1,
-                    singleFirepower: 20,
-                    burstCount: 4,
-                    latency: 5.00,
-                    communicationVolume: 20,
-                    description: "",
-                    notes: "初期装備"
-                },
-                {
-                    id: "equip_005",
-                    imagePath: "equip_005.png",
-                    emoji: "💻",
-                    name: "標準演算端末 W10",
-                    type: "通信端末",
-                    rarity: 2,
-                    singleFirepower: 100,
-                    burstCount: 2,
-                    latency: 3.00,
-                    communicationVolume: 30,
-                    description: "",
-                    notes: "初期装備"
-                },
-                {
-                    id: "equip_006",
-                    imagePath: "equip_006.png",
-                    emoji: "💻",
-                    name: "標準演算端末 W11",
-                    type: "通信端末",
-                    rarity: 2,
-                    singleFirepower: 110,
-                    burstCount: 2,
-                    latency: 3.00,
-                    communicationVolume: 30,
-                    description: "",
-                    notes: "初期装備"
-                },
-                {
-                    id: "equip_007",
-                    imagePath: "equip_007.png",
-                    emoji: "📶",
-                    name: "全自動注文プログラム F-ks",
-                    type: "プログラム",
-                    rarity: 3,
-                    singleFirepower: 20,
-                    burstCount: 10,
-                    latency: 1.50,
-                    communicationVolume: 50,
-                    description: "",
-                    notes: "初期装備"
-                },
-                {
-                    id: "equip_008",
-                    imagePath: "equip_008.png",
-                    emoji: "📶",
-                    name: "高速注文プログラム 松",
-                    type: "プログラム",
-                    rarity: 3,
-                    singleFirepower: 12,
-                    burstCount: 20,
-                    latency: 0.80,
-                    communicationVolume: 50,
-                    description: "",
-                    notes: "初期装備"
-                }
-            ]
+                { id: "equip_001", imagePath: "equip_001.png", emoji: "⭐", name: "注文詠唱 Type-L", type: "術式", rarity: 1, singleFirepower: 30, burstCount: 3, latency: 1.00, communicationVolume: 10 },
+                { id: "equip_002", imagePath: "equip_002.png", emoji: "⭐", name: "注文詠唱 Type-S", type: "術式", rarity: 1, singleFirepower: 100, burstCount: 1, latency: 1.00, communicationVolume: 10 },
+                { id: "equip_003", imagePath: "equip_003.png", emoji: "📱", name: "小型通信端末 SE-III", type: "携帯通信端末", rarity: 1, singleFirepower: 80, burstCount: 1, latency: 5.00, communicationVolume: 20 },
+                { id: "equip_004", imagePath: "equip_004.png", emoji: "📱", name: "汎用通信端末 Type-R", type: "携帯通信端末", rarity: 1, singleFirepower: 20, burstCount: 4, latency: 5.00, communicationVolume: 20 },
+                { id: "equip_005", imagePath: "equip_005.png", emoji: "💻", name: "標準演算端末 W10", type: "通信端末", rarity: 2, singleFirepower: 100, burstCount: 2, latency: 3.00, communicationVolume: 30 },
+                { id: "equip_007", imagePath: "equip_007.png", emoji: "📶", name: "全自動注文プログラム F-ks", type: "プログラム", rarity: 3, singleFirepower: 20, burstCount: 10, latency: 1.50, communicationVolume: 50 },
+                { id: "equip_008", imagePath: "equip_008.png", emoji: "📶", name: "高速注文プログラム 松", type: "プログラム", rarity: 3, singleFirepower: 12, burstCount: 20, latency: 0.80, communicationVolume: 50 }
+            ],
+
+            // 敵のマスターデータにレイテンシと回避を追加
+            ENEMIES: {
+                "enemy_001": { id: "enemy_001", name: "スライム株主", hp: 200, attack: 30, latency: 2.5, evasion: 10, reward: 2000 },
+                "enemy_002": { id: "enemy_002", name: "クレーマーおじさん", hp: 1200, attack: 100, latency: 1.2, evasion: 5, reward: 8000 }
+            }
         };
+
+        const findMasterItem = (id) => MASTER.CONSUMABLES.find(m => m.id === id) || MASTER.EQUIPS.find(m => m.id === id);
+        const findMasterCharacter = (id) => MASTER.CHARACTERS.find(m => m.id === id);
+        const isEquipment = (id) => MASTER.EQUIPS.some(m => m.id === id);
 
         // --- 2. STATE (変動データ) ---
         const state = {
-            resources: {
-                money: 100000, // 資金
-                communicationPacket: 50, // 通信パケット (旧creditStock)
-                envelopes: 5,
-                votingRights: 0 // 議決権
-            },
-            characters: [ // 所持キャラクターの動的な状態
-                // ここに chra_001 のようなキャラクターインスタンスが格納される
-                // 例: { id: "chara_001", currentMargin: 250, currentFatigue: 0, currentPacketPoint: 300, currentExp: 0 }
-            ], // ここに閉じ角括弧を追加
-            pray: {
-                isRunning: false,
-                elapsed: 0,
-                isComplete: false
-            },
-            inventory: { // 獲得したアイテムを管理
-                items: [] // { id: "item_id", quantity: 1 } の形式で格納
-            },
-            statistics: {
-                prayCount: 0,
-                gachaCount: 0
-            }
+            resources: { money: 100000, communicationPacket: 50, envelopes: 5, votingRights: 0 },
+            characters: [],
+            party: [null, null, null],
+            pray: { isRunning: false, elapsed: 0, isComplete: false },
+            inventory: { items: [] },
+            statistics: { prayCount: 0, gachaCount: 0 },
+            initialCharacterSelected: false,
         };
 
-        // --- 3. UI RENDERER (画面表示) ---
-        function updateUI() {
-            // 左パネルの表示更新
-            document.getElementById('ui-money').innerText = state.resources.money.toLocaleString(); // 資金
-            document.getElementById('ui-communication-packet').innerText = state.resources.communicationPacket.toLocaleString(); // 通信パケット
-            document.getElementById('ui-envelope').innerText = state.resources.envelopes.toLocaleString(); // 桁区切り追加
-            document.getElementById('ui-voting-rights').innerText = state.resources.votingRights.toLocaleString(); // 新規追加
+        function addItemToInventory(itemId, quantity = 1) {
+            let invItem = state.inventory.items.find(item => item.id === itemId);
+            if (invItem) invItem.quantity += quantity;
+            else state.inventory.items.push({ id: itemId, quantity: quantity });
+        }
 
+        function removeItemFromInventory(itemId, quantity = 1) {
+            let invItem = state.inventory.items.find(item => item.id === itemId);
+            if (invItem && invItem.quantity >= quantity) {
+                invItem.quantity -= quantity;
+                return true;
+            }
+            return false;
+        }
+
+        function acquireCharacter(charId) {
+            const masterChar = findMasterCharacter(charId);
+            if (masterChar) {
+                let instanceCounter = 0, newInstanceId;
+                do { newInstanceId = `${masterChar.id}_instance_${instanceCounter++}`; } while (state.characters.some(c => c.instanceId === newInstanceId));
+
+                const newCharacter = {
+                    id: masterChar.id, instanceId: newInstanceId,
+                    currentMargin: masterChar.maxMargin, currentFatigue: 0, currentPacketPoint: masterChar.maxPacketPoint, currentExp: 0, level: 1, equippedItems: []
+                };
+
+                if (masterChar.initialEquips) {
+                    masterChar.initialEquips.forEach(eq => {
+                        addItemToInventory(eq.itemId, 1);
+                        removeItemFromInventory(eq.itemId, 1);
+                        newCharacter.equippedItems.push({ slotIndex: eq.slotIndex, itemId: eq.itemId });
+                    });
+                }
+                
+                state.characters.push(newCharacter);
+                const emptySlotIndex = state.party.indexOf(null);
+                if (emptySlotIndex !== -1) state.party[emptySlotIndex] = newInstanceId;
+
+                return newInstanceId;
+            }
+            return null;
+        }
+
+        // --- 3. UI RENDERER ---
+        function updateUI() {
+            // 基本リソースの更新
+            document.getElementById('ui-money').innerText = state.resources.money.toLocaleString();
+            document.getElementById('ui-communication-packet').innerText = state.resources.communicationPacket.toLocaleString();
+            document.getElementById('ui-envelope').innerText = state.resources.envelopes.toLocaleString();
+            document.getElementById('ui-voting-rights').innerText = state.resources.votingRights.toLocaleString();
+
+            // 祈念UIの更新（復元）
             document.getElementById('ui-pray-status').innerText = state.pray.isRunning ? "進行中" : (state.pray.isComplete ? "完了（待機）" : "待機中");
             document.getElementById('ui-pray-time').innerText = state.pray.elapsed;
-            const progress = (state.pray.elapsed / MASTER.PRAY_DURATION) * 100;
-            document.getElementById('ui-pray-progress').style.width = progress + "%";
-
-            // ボタンの有効・無効管理
+            document.getElementById('ui-pray-progress').style.width = (state.pray.elapsed / MASTER.PRAY_DURATION) * 100 + "%";
             document.getElementById('btn-pray').disabled = state.pray.isRunning || state.pray.isComplete;
             document.getElementById('btn-settle').disabled = !state.pray.isComplete;
 
-            // ヘルパー関数: マスターデータからアイテムを検索
-            // CONSUMABLESとEQUIPSの両方から検索
-            const findMasterItem = (id) => {
-                return MASTER.CONSUMABLES.find(mItem => mItem.id === id) || MASTER.EQUIPS.find(mItem => mItem.id === id);
-            };
-
-            // インベントリ表示
+            // インベントリの更新（復元）
             const inventoryElement = document.getElementById('ui-inventory');
-            inventoryElement.innerHTML = ''; // 以前の内容をクリア
-            if (state.inventory.items.length === 0) {
-                inventoryElement.innerText = "アイテムなし";
-            } else { // 変更: CONSUMABLESとEQUIPSの両方から検索
-                // CONSUMABLESから検索
-                state.inventory.items.forEach(invItem => {
-                    const masterItem = findMasterItem(invItem.id); // findMasterItem を使用してマスターアイテムを取得
-                    if (masterItem) {
-                        const itemEntry = document.createElement('div');
-                        itemEntry.innerText = `${masterItem.emoji} ${masterItem.name} x${invItem.quantity}`;
-                        inventoryElement.appendChild(itemEntry);
-                    }
-                });
-            }
-            // 右パネル：生のデータをそのまま表示
+            inventoryElement.innerHTML = '';
+            state.inventory.items.filter(item => item.quantity > 0).forEach(invItem => {
+                const mItem = findMasterItem(invItem.id);
+                if (mItem) inventoryElement.innerHTML += `<div>${mItem.emoji} ${mItem.name} x${invItem.quantity}</div>`;
+            });
+
+            // キャラクター表示の更新（レイアウト整理＆バー追加）
+            const charactersElement = document.getElementById('ui-characters');
+            charactersElement.innerHTML = '';
+            state.characters.forEach(charInstance => {
+                const mChar = findMasterCharacter(charInstance.id);
+                if (mChar) {
+                    const partyIndex = state.party.indexOf(charInstance.instanceId);
+                    const partyLabel = partyIndex !== -1 ? `<span style="color:#ffaa00;">[編成中:枠${partyIndex}]</span> ` : '';
+                    let eqText = charInstance.equippedItems.map(eq => `[枠${eq.slotIndex}]${findMasterItem(eq.itemId)?.name}`).join(' ');
+                    
+                    // HPの割合計算と色判定
+                    const hpPercent = Math.max(0, Math.min(1, charInstance.currentMargin / mChar.maxMargin));
+                    let hpClass = "bar-fill-hp";
+                    if (hpPercent <= 0.2) hpClass += " danger";
+                    else if (hpPercent <= 0.5) hpClass += " warning";
+
+                    // MP・PPの割合計算
+                    const mpPercent = Math.max(0, Math.min(1, charInstance.currentFatigue / mChar.maxFatigue));
+                    const ppPercent = Math.max(0, Math.min(1, charInstance.currentPacketPoint / mChar.maxPacketPoint));
+
+                    charactersElement.innerHTML += `
+                        <div style="margin-bottom: 5px;">
+                            ${partyLabel}${mChar.emoji} <strong style="color:#fff;">${mChar.name}</strong> (Lv.${charInstance.level})
+                        </div>
+                        
+                        <div class="status-row">
+                            <span class="status-label">証拠金(HP):</span>
+                            <span class="status-value">${charInstance.currentMargin}/${mChar.maxMargin}</span>
+                            <div class="status-bar-bg"><div class="${hpClass}" style="width: ${hpPercent * 100}%;"></div></div>
+                        </div>
+                        
+                        <div class="status-row">
+                            <span class="status-label">疲労度(MP):</span>
+                            <span class="status-value">${charInstance.currentFatigue}/${mChar.maxFatigue}</span>
+                            <div class="status-bar-bg"><div class="bar-fill-mp" style="width: ${mpPercent * 100}%;"></div></div>
+                        </div>
+                        
+                        <div class="status-row">
+                            <span class="status-label">パケット(PP):</span>
+                            <span class="status-value">${charInstance.currentPacketPoint}/${mChar.maxPacketPoint}</span>
+                            <div class="status-bar-bg"><div class="bar-fill-pp" style="width: ${ppPercent * 100}%;"></div></div>
+                        </div>
+                        
+                        <div style="margin-top: 4px; color: #ccc; font-size: 12px;">装備: ${eqText || "なし"}</div>
+                        <hr style="border-top:1px dashed #333; margin: 8px 0;">
+                    `;
+                }
+            });
+
+            // パーティ編成表示の更新
+            const partyElement = document.getElementById('ui-party');
+            partyElement.innerHTML = '';
+            let totalMargin = 0, totalFirepower = 0;
+            const slotNames = ["前衛", "中衛", "後衛"];
+
+            state.party.forEach((instanceId, index) => {
+                const slotDiv = document.createElement('div');
+                slotDiv.className = 'party-slot';
+                if (instanceId) {
+                    const charInstance = state.characters.find(c => c.instanceId === instanceId);
+                    const mChar = findMasterCharacter(charInstance.id);
+                    totalMargin += charInstance.currentMargin;
+                    let charPower = 10;
+                    charInstance.equippedItems.forEach(eq => {
+                        const mEquip = findMasterItem(eq.itemId);
+                        if (mEquip && mEquip.singleFirepower) charPower += (mEquip.singleFirepower * (mEquip.burstCount || 1));
+                    });
+                    totalFirepower += charPower;
+
+                    const statusText = charInstance.currentMargin <= 0 ? `<span style="color:red; font-weight:bold;">【退場中】</span>` : `(HP:${charInstance.currentMargin})`;
+                    slotDiv.innerHTML = `<strong style="color:#aaa;">[${index}: ${slotNames[index]}]</strong> ${mChar.emoji} ${mChar.name} ${statusText} / 火力:${charPower}`;
+                } else {
+                    slotDiv.innerHTML = `<strong style="color:#aaa;">[${index}: ${slotNames[index]}]</strong> <span style="color:#666;">-- 空き --</span>`;
+                }
+                partyElement.appendChild(slotDiv);
+            });
+
+            partyElement.innerHTML += `<div style="margin-top:10px; color:#ffca28;">★ 部隊総戦力： <strong>証拠金(HP): ${totalMargin} / 総火力目安: ${totalFirepower}</strong></div>`;
+
+            updateSelectBoxes();
             document.getElementById('raw-data').innerText = JSON.stringify(state, null, 4);
         }
 
-        /**
-         * 重みに基づいてアイテムを抽選する汎用関数
-         * @param {Array<Object>} items - 抽選対象のアイテム配列。各アイテムは 'weight' プロパティを持つこと。
-         * @returns {Object|null} 抽選されたアイテムオブジェクト、または抽選対象がない場合はnull
-         */
-        function drawItemByWeight(items) {
-            const totalWeight = items.reduce((sum, item) => sum + (item.weight || 0), 0);
-            if (totalWeight === 0) return null;
+        function updateSelectBoxes() {
+            const charSelectEquip = document.getElementById('select-chara-equip');
+            const charSelectParty = document.getElementById('select-chara-party');
+            const itemSelect = document.getElementById('select-item-equip');
+            const currentCharEquip = charSelectEquip.value, currentCharParty = charSelectParty.value, currentItem = itemSelect.value;
 
-            let random = Math.random() * totalWeight;
-            for (const item of items) {
-                if (random < (item.weight || 0)) {
-                    return item;
+            const charOptionsHTML = '<option value="">キャラクターを選択</option>' + state.characters.map(char => {
+                return `<option value="${char.instanceId}">${state.party.includes(char.instanceId) ? "[編成中] " : ""}${findMasterCharacter(char.id).name}</option>`;
+            }).join('');
+
+            charSelectEquip.innerHTML = charOptionsHTML; charSelectParty.innerHTML = charOptionsHTML;
+            if(currentCharEquip) charSelectEquip.value = currentCharEquip; if(currentCharParty) charSelectParty.value = currentCharParty;
+
+            itemSelect.innerHTML = '<option value="">アイテムを選択</option>';
+            state.inventory.items.forEach(invItem => {
+                if (invItem.quantity > 0 && isEquipment(invItem.id)) {
+                    itemSelect.innerHTML += `<option value="${invItem.id}">${findMasterItem(invItem.id).name} (所持:${invItem.quantity})</option>`;
                 }
-                random -= (item.weight || 0);
-            }
-            return null; // 万が一のためのフォールバック
+            });
+            if(currentItem) itemSelect.value = currentItem;
         }
-        // ログ出力関数
-        // README.md の指示に基づき、コードスニペットを受け取り、state.変数をハイライトする
+
         function pushLog(codeSnippet) {
             const logArea = document.getElementById('action-log');
-            const time = new Date().toLocaleTimeString();
-            // state. で始まる変数をハイライト
             const highlightedCode = codeSnippet.replace(/(state\.[a-zA-Z0-9_.]+)/g, '<span class="log-code-highlight">$1</span>');
             const entry = document.createElement('div');
-            entry.innerHTML = `<span class="log-time">[${time}]</span> ${highlightedCode}`;
+            entry.innerHTML = `<span class="log-time">[${new Date().toLocaleTimeString()}]</span> ${highlightedCode}`;
             logArea.prepend(entry);
         }
 
-        // --- 4. TIMER LOGIC (時間経過の仕組み) ---
-        setInterval(() => {
-            if (state.pray.isRunning) {
-                state.pray.elapsed += 1;
-                if (state.pray.elapsed >= MASTER.PRAY_DURATION) {
-                    state.pray.isRunning = false;
-                    state.pray.isComplete = true;
-                    pushLog("state.pray.isRunning = false; state.pray.isComplete = true; // 祈念完了");
-                }
-                updateUI();
-            }
-        }, 1000);
-
-        // --- 5. BUTTON ACTIONS (操作時の挙動) ---
-
-        document.getElementById('btn-pray').onclick = () => {
-            state.pray.isRunning = true;
-            state.pray.elapsed = 0; // 経過時間をリセット
-            state.pray.isComplete = false; // 完了状態をリセット
-            state.statistics.prayCount += 1; // 統計を更新
-            pushLog("state.pray.isRunning = true; state.pray.elapsed = 0; state.pray.isComplete = false; state.statistics.prayCount += 1; // 祈念開始");
-            updateUI();
+        // --- 5. BUTTON ACTIONS ---
+        document.getElementById('btn-pray').onclick = () => { 
+            state.pray.isRunning = true; 
+            state.pray.elapsed = 0; 
+            state.pray.isComplete = false; 
+            pushLog("state.pray.isRunning = true; // 祈念開始");
+            updateUI(); 
         };
-
-        document.getElementById('btn-settle').onclick = () => {
-            if (state.pray.isComplete) {
-                state.resources.money += MASTER.PRAY_REWARD_MONEY; // 資金獲得
-                state.resources.communicationPacket += MASTER.PRAY_REWARD_COMMUNICATION_PACKET; // 通信パケット獲得
-                state.pray.isComplete = false; // 完了状態をリセット
-                state.pray.elapsed = 0; // 経過時間をリセット
-                pushLog(`state.resources.money += ${MASTER.PRAY_REWARD_MONEY}; state.resources.communicationPacket += ${MASTER.PRAY_REWARD_COMMUNICATION_PACKET}; state.pray.isComplete = false; state.pray.elapsed = 0; // 報酬受け取り`);
-                updateUI();
+        document.getElementById('btn-settle').onclick = () => { 
+            if (state.pray.isComplete) { 
+                state.resources.money += MASTER.PRAY_REWARD_MONEY; 
+                state.resources.communicationPacket += MASTER.PRAY_REWARD_COMMUNICATION_PACKET; 
+                state.pray.isComplete = false; 
+                state.pray.elapsed = 0; 
+                pushLog(`state.resources.money += ${MASTER.PRAY_REWARD_MONEY}; // 報酬受取`);
+                updateUI(); 
             }
         };
-
         document.getElementById('btn-gacha').onclick = () => {
             if (state.resources.envelopes > 0) {
-                // 封筒開封時に議決権も増えるように変更 (sample.html と README.md に準拠)
-                state.resources.envelopes -= 1;
-                state.statistics.gachaCount += 1; // 統計を更新
-
-                // 茶封筒から排出されるアイテムのリストと重みを取得
-                const brownEnvelopeItems = MASTER.CONSUMABLES.filter(item => item.gachaWeight_brownEnvelope !== undefined) // 変更: CONSUMABLESから抽選
-                                                       .map(item => ({ ...item, weight: item.gachaWeight_brownEnvelope }));
-
-                const drawnItem = drawItemByWeight(brownEnvelopeItems);
-
-                let logMessage = `state.resources.envelopes -= 1; state.statistics.gachaCount += 1; `;
-                if (drawnItem) {
-                    // 議決権はアイテム獲得とは別に必ず増える
-                    state.resources.votingRights += 1;
-                    logMessage += `state.resources.votingRights += 1; `;
-
-                    // 獲得したアイテムをインベントリに追加/更新
-                    // findMasterItem は updateUI() のスコープで定義されているため、ここでは再定義しない
-                    const itemQuantityForLog = (state.inventory.items.find(item => item.id === drawnItem.id)?.quantity || 0) + 1;
-                    const itemLogText = `${drawnItem.emoji} ${drawnItem.name} x${itemQuantityForLog}`;
-                    let inventoryItem = state.inventory.items.find(item => item.id === drawnItem.id);
-                    if (inventoryItem) {
-                        inventoryItem.quantity += 1;
-                        logMessage += `state.inventory.items.find(item => item.id === "${drawnItem.id}").quantity += 1; // 獲得: ${itemLogText}`;
-                    } else {
-                        state.inventory.items.push({ id: drawnItem.id, quantity: 1 });
-                        logMessage += `state.inventory.items.push({ id: "${drawnItem.id}", quantity: 1 }); // 獲得: ${itemLogText}`;
-                    }
-                } else {
-                    logMessage += `// 封筒を開封しましたが、アイテムは獲得できませんでした。`;
-                }
-                pushLog(logMessage);
+                state.resources.envelopes--; 
+                state.resources.votingRights++;
+                const item = MASTER.CONSUMABLES[Math.floor(Math.random() * MASTER.CONSUMABLES.length)]; // 簡易抽選
+                addItemToInventory(item.id, 1); 
+                pushLog(`// ガチャ獲得: ${item.name}`); 
                 updateUI();
             }
         };
-        document.getElementById('btn-cheat').onclick = () => {
-            state.resources.envelopes += 10;
-            pushLog("state.resources.envelopes += 10; // デバッグ: 封筒追加");
+
+        document.getElementById('btn-cheat').onclick = () => { state.resources.envelopes += 10; updateUI(); };
+        document.getElementById('btn-cheat-chara').onclick = () => { acquireCharacter("chara_001"); updateUI(); };
+        document.getElementById('btn-cheat-add-item').onclick = () => { addItemToInventory("equip_001", 1); addItemToInventory("equip_005", 1); updateUI(); };
+        
+        document.getElementById('btn-party-set').onclick = () => {
+            const instanceId = document.getElementById('select-chara-party').value, slotIndex = parseInt(document.getElementById('select-party-slot').value, 10);
+            const exIdx = state.party.indexOf(instanceId); if (exIdx !== -1) state.party[exIdx] = null;
+            state.party[slotIndex] = instanceId; updateUI();
+        };
+        document.getElementById('btn-party-remove').onclick = () => { const slotIndex = parseInt(document.getElementById('select-party-slot').value, 10); state.party[slotIndex] = null; updateUI(); };
+
+        document.getElementById('btn-equip-swap').onclick = () => {
+            const instanceId = document.getElementById('select-chara-equip').value, itemId = document.getElementById('select-item-equip').value, slotIndex = parseInt(document.getElementById('input-slot-index').value, 10);
+            if (!instanceId || !itemId || isNaN(slotIndex)) return alert("正しく選択してください");
+            const targetChar = state.characters.find(c => c.instanceId === instanceId);
+            if (slotIndex >= findMasterCharacter(targetChar.id).numEquipSlots) return alert(`スロット上限オーバー`);
+            if (!removeItemFromInventory(itemId, 1)) return alert("アイテムがありません");
+
+            const existingEquipIndex = targetChar.equippedItems.findIndex(eq => eq.slotIndex === slotIndex);
+            if (existingEquipIndex !== -1) { addItemToInventory(targetChar.equippedItems[existingEquipIndex].itemId, 1); targetChar.equippedItems.splice(existingEquipIndex, 1); }
+            targetChar.equippedItems.push({ slotIndex: slotIndex, itemId: itemId }); updateUI();
+        };
+        document.getElementById('btn-unequip').onclick = () => {
+            const instanceId = document.getElementById('select-chara-equip').value, slotIndex = parseInt(document.getElementById('input-slot-index').value, 10);
+            const targetChar = state.characters.find(c => c.instanceId === instanceId);
+            const existingEquipIndex = targetChar.equippedItems.findIndex(eq => eq.slotIndex === slotIndex);
+            if (existingEquipIndex !== -1) { addItemToInventory(targetChar.equippedItems[existingEquipIndex].itemId, 1); targetChar.equippedItems.splice(existingEquipIndex, 1); updateUI(); }
+        };
+
+        // ==========================================
+        // ★ バトルエンジン（演算ロジック） ★
+        // ==========================================
+        let battleState = {
+            isActive: false,
+            enemy: null,
+            turn: 0
+        };
+
+        const logArea = document.getElementById('battle-log');
+
+        function appendBattleLog(htmlMsg) {
+            logArea.innerHTML += htmlMsg + "<br>";
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // 1. 出撃開始
+        document.getElementById('btn-battle-start').onclick = () => {
+            if (state.resources.communicationPacket < 10) return alert("通信パケットが足りません！");
+            
+            const activeParty = state.party.filter(id => id && state.characters.find(c => c.instanceId === id).currentMargin > 0);
+            if (activeParty.length === 0) return alert("戦えるキャラクターがいません！（HP0は出撃不可）");
+
+            state.resources.communicationPacket -= 10;
+            battleState.isActive = true;
+            battleState.turn = 1;
+            battleState.enemy = { ...MASTER.ENEMIES[document.getElementById('select-enemy').value] };
+            
+            logArea.innerHTML = '';
+            appendBattleLog(`<strong style="color:yellow;">--- ⚔️ BATTLE START: vs ${battleState.enemy.name} ---</strong>`);
+            pushLog(`// 出撃: vs ${battleState.enemy.name} (パケット-10)`);
+            
+            simulateTurn();
+        };
+
+        // 2. 追撃する（2巡目以降）
+        document.getElementById('btn-battle-next').onclick = () => {
+            battleState.turn++;
+            simulateTurn();
+        };
+
+        // 3. リザルト確定（撤退 / 勝利報酬獲得）
+        document.getElementById('btn-battle-finish').onclick = () => {
+            if (battleState.enemy.hp <= 0) {
+                state.resources.money += battleState.enemy.reward;
+                appendBattleLog(`<strong style="color:gold;">【勝利】 報酬として 💴 ${battleState.enemy.reward} を獲得！</strong>`);
+                pushLog(`state.resources.money += ${battleState.enemy.reward}; // 勝利報酬`);
+            } else {
+                appendBattleLog(`<strong style="color:#aaa;">【撤退】 戦闘を終了しました。</strong>`);
+                pushLog(`// バトルから撤退`);
+            }
+            
+            battleState.isActive = false;
+            updateBattleUI();
             updateUI();
         };
 
-        // 起動時の初期表示
+        // ★ターンの演算関数★
+        function simulateTurn() {
+            appendBattleLog(`<br><strong style="color:#88ccff;">--- 【${battleState.turn}巡目】 ---</strong>`);
+            
+            let combatants = [];
+            
+            // 味方のステータス集計とエントリー
+            state.party.forEach(id => {
+                if (!id) return;
+                let char = state.characters.find(c => c.instanceId === id);
+                if (char.currentMargin <= 0) return; // 退場済みは不参加
+                
+                let mChar = findMasterCharacter(char.id);
+                let totalLatency = 0, equipCount = 0;
+                let totalPower = 0, ppCost = 0;
+                
+                // 装備品からステータスを計算
+                char.equippedItems.forEach(eq => {
+                    let mEq = findMasterItem(eq.itemId);
+                    if(mEq) {
+                        totalLatency += mEq.latency;
+                        equipCount++;
+                        let power = mEq.singleFirepower * (mEq.burstCount || 1);
+                        totalPower += power;
+                        // PP消費計算: 注文火力 * 連打回数 * 通信量
+                        ppCost += power * (mEq.communicationVolume || 0); 
+                    }
+                });
+                
+                // 行動順影響: 装備レイテンシの平均（装備なしは遅い）
+                let avgLatency = equipCount > 0 ? (totalLatency / equipCount) : 10.0; 
+                
+                combatants.push({
+                    type: 'ally', id: id, name: mChar.name,
+                    latency: avgLatency, power: totalPower || 10, ppCost: ppCost, evasion: mChar.evasion, charRef: char
+                });
+            });
+            
+            // 敵のエントリー
+            if (battleState.enemy.hp > 0) {
+                combatants.push({
+                    type: 'enemy', id: battleState.enemy.id, name: battleState.enemy.name,
+                    latency: battleState.enemy.latency, power: battleState.enemy.attack, evasion: battleState.enemy.evasion, hp: battleState.enemy.hp
+                });
+            }
+            
+            // 【重要】レイテンシの低い（速い）順にソートして行動順を決定
+            combatants.sort((a, b) => a.latency - b.latency);
+            
+            // 行動ループ
+            for (let actor of combatants) {
+                // 終了判定
+                if (battleState.enemy.hp <= 0) break;
+                let activeAllies = state.party.filter(id => id && state.characters.find(c => c.instanceId === id).currentMargin > 0);
+                if (activeAllies.length === 0) break;
+                
+                if (actor.type === 'ally') {
+                    if (actor.charRef.currentMargin <= 0) continue; // 行動前に倒されていたらスキップ
+                    
+                    // PPを消費
+                    actor.charRef.currentPacketPoint -= actor.ppCost;
+                    actor.charRef.currentFatigue += 5; // 疲労度蓄積
+                    
+                    // 回避判定
+                    if (Math.random() * 100 < battleState.enemy.evasion) {
+                        appendBattleLog(`[Ally] ${actor.name} の攻撃！ -> <span style="color:#aaa;">Miss! 回避された！</span> (PP-${actor.ppCost})`);
+                    } else {
+                        battleState.enemy.hp -= actor.power;
+                        appendBattleLog(`[Ally] ${actor.name} の攻撃！ -> <span style="color:#00ff00;">${battleState.enemy.name}に ${actor.power} のダメージ！</span> (PP-${actor.ppCost})`);
+                    }
+                    
+                } else if (actor.type === 'enemy') {
+                    // ランダムな生存味方をターゲット
+                    let targetId = activeAllies[Math.floor(Math.random() * activeAllies.length)];
+                    let targetChar = state.characters.find(c => c.instanceId === targetId);
+                    let mTarget = findMasterCharacter(targetChar.id);
+                    
+                    if (Math.random() * 100 < mTarget.evasion) {
+                        appendBattleLog(`[Enemy] ${actor.name} の攻撃！ -> <span style="color:#aaa;">Miss! ${mTarget.name} は回避した！</span>`);
+                    } else {
+                        targetChar.currentMargin = Math.max(0, targetChar.currentMargin - actor.power);
+                        appendBattleLog(`[Enemy] ${actor.name} の攻撃！ -> <span style="color:#ff5555;">${mTarget.name} に ${actor.power} のダメージ！</span>`);
+                        
+                        if (targetChar.currentMargin === 0) {
+                            appendBattleLog(`<span style="color:red; font-weight:bold;">⚠️ ${mTarget.name} は退場(ロスト)した...</span>`);
+                        }
+                    }
+                }
+            }
+            
+            appendBattleLog(`(敵残りHP: ${battleState.enemy.hp})`);
+            updateBattleUI();
+            updateUI(); // 毎ターンUIを更新してHPやPPの減少を反映
+        }
+
+        function updateBattleUI() {
+            let btnStart = document.getElementById('btn-battle-start');
+            let btnNext = document.getElementById('btn-battle-next');
+            let btnFinish = document.getElementById('btn-battle-finish');
+            
+            if (battleState.isActive) {
+                btnStart.disabled = true;
+                let activeAllies = state.party.filter(id => id && state.characters.find(c => c.instanceId === id).currentMargin > 0);
+                
+                // 敵を倒した、または味方が全滅した場合は「追撃」不可、「リザルト」のみ可能
+                if (battleState.enemy.hp <= 0 || activeAllies.length === 0) {
+                    btnNext.disabled = true;
+                    btnFinish.disabled = false;
+                } else {
+                    btnNext.disabled = false; // まだ戦えるなら追撃可能
+                    btnFinish.disabled = false; // 途中で撤退も可能
+                }
+            } else {
+                btnStart.disabled = false;
+                btnNext.disabled = true;
+                btnFinish.disabled = true;
+            }
+        }
+
+        // --- 初期化 ---
+        if (!state.initialCharacterSelected) {
+            const initialCharIds = ["chara_001", "chara_002"];
+            acquireCharacter(initialCharIds[Math.floor(Math.random() * initialCharIds.length)]);
+            state.initialCharacterSelected = true;
+        }
         updateUI();
-        pushLog("// システム起動");
     </script>
 </body>
 
